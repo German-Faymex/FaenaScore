@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Filter, UserPlus, Users } from 'lucide-react'
 import { api, type Worker } from '../lib/api'
+import { useOrg } from '../lib/org'
 import { useDebounce } from '../hooks/useDebounce'
 import { SPECIALTIES } from '../lib/constants'
 import ScoreBadge from '../components/ui/ScoreBadge'
 
-const ORG_ID = 'default'
-
 export default function Workers() {
+  const { orgId: ORG_ID } = useOrg()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -18,10 +18,11 @@ export default function Workers() {
   const debouncedSearch = useDebounce(search)
 
   useEffect(() => {
+    if (!ORG_ID) return
     async function load() {
       setLoading(true)
       try {
-        const res = await api.listWorkers(ORG_ID, {
+        const res = await api.listWorkers(ORG_ID!, {
           search: debouncedSearch || undefined,
           specialty: specialty || undefined,
           min_score: minScore ? parseFloat(minScore) : undefined,
@@ -36,7 +37,7 @@ export default function Workers() {
       }
     }
     load()
-  }, [debouncedSearch, specialty, minScore])
+  }, [ORG_ID, debouncedSearch, specialty, minScore])
 
   return (
     <div className="space-y-4">

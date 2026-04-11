@@ -2,19 +2,20 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ClipboardCheck } from 'lucide-react'
 import { api, type Project } from '../lib/api'
-
-const ORG_ID = 'default'
+import { useOrg } from '../lib/org'
 
 export default function Evaluate() {
+  const { orgId: ORG_ID } = useOrg()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.listProjects(ORG_ID, { status: 'active', size: 50 })
+    if (!ORG_ID) return
+    api.listProjects(ORG_ID!, { status: 'active', size: 50 })
       .then((res) => setProjects(res.items))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [ORG_ID])
 
   if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
 

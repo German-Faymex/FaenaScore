@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Save, ArrowLeft } from 'lucide-react'
 import StarRating from '../components/ui/StarRating'
 import { api } from '../lib/api'
+import { useOrg } from '../lib/org'
 import { SCORE_LABELS, REHIRE_OPTIONS } from '../lib/constants'
 
-const ORG_ID = 'default'
-
 export default function EvaluateWorker() {
+  const { orgId: ORG_ID } = useOrg()
   const { projectId, workerId } = useParams()
   const navigate = useNavigate()
 
@@ -27,7 +27,7 @@ export default function EvaluateWorker() {
     setError('')
 
     try {
-      await api.createEvaluation(ORG_ID, {
+      await api.createEvaluation(ORG_ID!, {
         project_id: projectId,
         worker_id: workerId,
         score_quality: scores[0],

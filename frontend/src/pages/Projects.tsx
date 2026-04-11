@@ -2,26 +2,27 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, FolderKanban } from 'lucide-react'
 import { api, type Project } from '../lib/api'
+import { useOrg } from '../lib/org'
 import { PROJECT_STATUSES } from '../lib/constants'
 
-const ORG_ID = 'default'
-
 export default function Projects() {
+  const { orgId: ORG_ID } = useOrg()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
+    if (!ORG_ID) return
     async function load() {
       setLoading(true)
       try {
-        const res = await api.listProjects(ORG_ID, { status: statusFilter || undefined, size: 50 })
+        const res = await api.listProjects(ORG_ID!, { status: statusFilter || undefined, size: 50 })
         setProjects(res.items)
       } catch { /* expected without DB */ }
       finally { setLoading(false) }
     }
     load()
-  }, [statusFilter])
+  }, [ORG_ID, statusFilter])
 
   const statusBadge = (s: string) => {
     const colors: Record<string, string> = { active: 'bg-green-100 text-green-700', completed: 'bg-blue-100 text-blue-700', planning: 'bg-gray-100 text-gray-700', cancelled: 'bg-red-100 text-red-700' }

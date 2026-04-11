@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { OrgProvider } from './lib/org'
 import AppShell from './components/layout/AppShell'
 import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
@@ -10,6 +11,7 @@ import EvaluateWorker from './pages/EvaluateWorker'
 
 export default function App() {
   return (
+    <OrgProvider>
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<Dashboard />} />
@@ -22,5 +24,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </OrgProvider>
   )
 }

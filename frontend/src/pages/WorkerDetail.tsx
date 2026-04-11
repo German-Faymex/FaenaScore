@@ -3,20 +3,20 @@ import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Phone, Mail } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api, type WorkerDetail as WorkerDetailType } from '../lib/api'
+import { useOrg } from '../lib/org'
 import StarRating from '../components/ui/StarRating'
 import ScoreBadge from '../components/ui/ScoreBadge'
 
-const ORG_ID = 'default'
-
 export default function WorkerDetail() {
+  const { orgId: ORG_ID } = useOrg()
   const { id } = useParams()
   const [worker, setWorker] = useState<WorkerDetailType | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!id) return
-    api.getWorker(ORG_ID, id).then(setWorker).catch(() => {}).finally(() => setLoading(false))
-  }, [id])
+    if (!id || !ORG_ID) return
+    api.getWorker(ORG_ID!, id).then(setWorker).catch(() => {}).finally(() => setLoading(false))
+  }, [id, ORG_ID])
 
   if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
   if (!worker) return <div className="text-gray-500">Trabajador no encontrado</div>

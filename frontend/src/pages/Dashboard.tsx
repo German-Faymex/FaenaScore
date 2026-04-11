@@ -2,24 +2,24 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, FolderKanban, ClipboardCheck, TrendingUp } from 'lucide-react'
 import { api, type DashboardStats, type TopWorker, type RecentEvaluation } from '../lib/api'
+import { useOrg } from '../lib/org'
 import ScoreBadge from '../components/ui/ScoreBadge'
 
-// TODO: replace with real org id from context
-const ORG_ID = 'default'
-
 export default function Dashboard() {
+  const { orgId: ORG_ID } = useOrg()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [topWorkers, setTopWorkers] = useState<TopWorker[]>([])
   const [recent, setRecent] = useState<RecentEvaluation[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!ORG_ID) return
     async function load() {
       try {
         const [s, tw, re] = await Promise.all([
-          api.getStats(ORG_ID),
-          api.getTopWorkers(ORG_ID),
-          api.getRecentEvaluations(ORG_ID),
+          api.getStats(ORG_ID!),
+          api.getTopWorkers(ORG_ID!),
+          api.getRecentEvaluations(ORG_ID!),
         ])
         setStats(s)
         setTopWorkers(tw)
@@ -31,7 +31,7 @@ export default function Dashboard() {
       }
     }
     load()
-  }, [])
+  }, [ORG_ID])
 
   if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
 

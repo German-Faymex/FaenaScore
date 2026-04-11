@@ -2,23 +2,23 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, ClipboardCheck } from 'lucide-react'
 import { api, type Project, type ProjectWorkerItem } from '../lib/api'
+import { useOrg } from '../lib/org'
 import ScoreBadge from '../components/ui/ScoreBadge'
 
-const ORG_ID = 'default'
-
 export default function ProjectDetail() {
+  const { orgId: ORG_ID } = useOrg()
   const { id } = useParams()
   const [project, setProject] = useState<Project | null>(null)
   const [workers, setWorkers] = useState<ProjectWorkerItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!id) return
+    if (!id || !ORG_ID) return
     async function load() {
       try {
         const [p, w] = await Promise.all([
-          api.getProject(ORG_ID, id!),
-          api.listProjectWorkers(ORG_ID, id!),
+          api.getProject(ORG_ID!, id!),
+          api.listProjectWorkers(ORG_ID!, id!),
         ])
         setProject(p)
         setWorkers(w)
@@ -26,7 +26,7 @@ export default function ProjectDetail() {
       finally { setLoading(false) }
     }
     load()
-  }, [id])
+  }, [id, ORG_ID])
 
   if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
   if (!project) return <div className="text-gray-500">Proyecto no encontrado</div>
