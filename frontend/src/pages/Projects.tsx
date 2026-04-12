@@ -1,28 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, FolderKanban } from 'lucide-react'
 import { api, type Project } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { PROJECT_STATUSES } from '../lib/constants'
+import Modal from '../components/ui/Modal'
+import NewProjectForm from '../components/forms/NewProjectForm'
 
 export default function Projects() {
   const { orgId: ORG_ID } = useOrg()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
+  const [showNew, setShowNew] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!ORG_ID) return
-    async function load() {
-      setLoading(true)
-      try {
-        const res = await api.listProjects(ORG_ID!, { status: statusFilter || undefined, size: 50 })
-        setProjects(res.items)
-      } catch { /* expected without DB */ }
-      finally { setLoading(false) }
-    }
-    load()
+    setLoading(true)
+    try {
+      const res = await api.listProjects(ORG_ID, { status: statusFilter || undefined, size: 50 })
+      setProjects(res.items)
+    } catch { /* expected without DB */ }
+    finally { setLoading(false) }
   }, [ORG_ID, statusFilter])
+
+  useEffect(() => { load() }, [load])
 
   const statusBadge = (s: string) => {
     const colors: Record<string, string> = { active: 'bg-green-100 text-green-700', completed: 'bg-blue-100 text-blue-700', planning: 'bg-gray-100 text-gray-700', cancelled: 'bg-red-100 text-red-700' }
@@ -33,7 +35,7 @@ export default function Projects() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Proyectos</h1>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+        <button onClick={() => setShowNew(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
           <Plus className="w-4 h-4" /> Nuevo Proyecto
         </button>
       </div>
@@ -73,6 +75,16 @@ export default function Projects() {
             </Link>
           ))}
         </div>
+      )}
+
+      {ORG_ID && (
+        <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Proyecto">
+          <NewProjectForm
+            orgId={ORG_ID}
+            onCreated={() => { setShowNew(false); load() }}
+            onCancel={() => setShowNew(false)}
+          />
+        </Modal>
       )}
     </div>
   )

@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, ClipboardCheck } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, UserPlus } from 'lucide-react'
 import { api, type Project, type ProjectWorkerItem } from '../lib/api'
 import { useOrg } from '../lib/org'
 import ScoreBadge from '../components/ui/ScoreBadge'
+import Modal from '../components/ui/Modal'
+import AssignWorkersForm from '../components/forms/AssignWorkersForm'
 
 export default function ProjectDetail() {
   const { orgId: ORG_ID } = useOrg()
@@ -11,22 +13,22 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null)
   const [workers, setWorkers] = useState<ProjectWorkerItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAssign, setShowAssign] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!id || !ORG_ID) return
-    async function load() {
-      try {
-        const [p, w] = await Promise.all([
-          api.getProject(ORG_ID!, id!),
-          api.listProjectWorkers(ORG_ID!, id!),
-        ])
-        setProject(p)
-        setWorkers(w)
-      } catch { /* */ }
-      finally { setLoading(false) }
-    }
-    load()
+    try {
+      const [p, w] = await Promise.all([
+        api.getProject(ORG_ID, id),
+        api.listProjectWorkers(ORG_ID, id),
+      ])
+      setProject(p)
+      setWorkers(w)
+    } catch { /* */ }
+    finally { setLoading(false) }
   }, [id, ORG_ID])
+
+  useEffect(() => { load() }, [load])
 
   if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
   if (!project) return <div className="text-gray-500">Proyecto no encontrado</div>
@@ -61,8 +63,11 @@ export default function ProjectDetail() {
 
       {/* Workers table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">Equipo ({workers.length})</h2>
+          <button onClick={() => setShowAssign(true)} className="flex items-center gap-1.5 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700">
+            <UserPlus className="w-4 h-4" /> Asignar
+          </button>
         </div>
         {workers.length === 0 ? (
           <p className="p-4 text-gray-400 text-sm">Sin trabajadores asignados</p>
@@ -90,6 +95,18 @@ export default function ProjectDetail() {
           </div>
         )}
       </div>
+
+      {ORG_ID && id && (
+        <Modal open={showAssign} onClose={() => setShowAssign(false)} title="Asignar Trabajadores" size="lg">
+          <AssignWorkersForm
+            orgId={ORG_ID}
+            projectId={id}
+            excludeIds={workers.map((w) => w.id)}
+            onAssigned={() => { setShowAssign(false); load() }}
+            onCancel={() => setShowAssign(false)}
+          />
+        </Modal>
+      )}
     </div>
   )
 }

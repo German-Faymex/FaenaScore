@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Filter, UserPlus, Users } from 'lucide-react'
+import { Search, Filter, UserPlus, Users, Upload } from 'lucide-react'
 import { api, type Worker } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { useDebounce } from '../hooks/useDebounce'
 import { SPECIALTIES } from '../lib/constants'
 import ScoreBadge from '../components/ui/ScoreBadge'
+import Modal from '../components/ui/Modal'
+import NewWorkerForm from '../components/forms/NewWorkerForm'
+import ImportWorkersForm from '../components/forms/ImportWorkersForm'
 
 export default function Workers() {
   const { orgId: ORG_ID } = useOrg()
@@ -15,37 +18,40 @@ export default function Workers() {
   const [specialty, setSpecialty] = useState('')
   const [minScore, setMinScore] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const debouncedSearch = useDebounce(search)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!ORG_ID) return
-    async function load() {
-      setLoading(true)
-      try {
-        const res = await api.listWorkers(ORG_ID!, {
-          search: debouncedSearch || undefined,
-          specialty: specialty || undefined,
-          min_score: minScore ? parseFloat(minScore) : undefined,
-          sort_by: 'last_name',
-          size: 50,
-        })
-        setWorkers(res.items)
-      } catch {
-        // expected without DB
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    setLoading(true)
+    try {
+      const res = await api.listWorkers(ORG_ID, {
+        search: debouncedSearch || undefined,
+        specialty: specialty || undefined,
+        min_score: minScore ? parseFloat(minScore) : undefined,
+        sort_by: 'last_name',
+        size: 50,
+      })
+      setWorkers(res.items)
+    } catch { /* expected without DB */ }
+    finally { setLoading(false) }
   }, [ORG_ID, debouncedSearch, specialty, minScore])
+
+  useEffect(() => { load() }, [load])
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Trabajadores</h1>
-        <Link to="/workers/new" className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-          <UserPlus className="w-4 h-4" /> Nuevo
-        </Link>
+        <div className="flex gap-2">
+          <button onClick={() => setShowImport(true)} className="flex items-center gap-2 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Importar</span>
+          </button>
+          <button onClick={() => setShowNew(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+            <UserPlus className="w-4 h-4" /> Nuevo
+          </button>
+        </div>
       </div>
 
       {/* Search + Filters */}
@@ -123,6 +129,17 @@ export default function Workers() {
             </table>
           </div>
         </div>
+      )}
+
+      {ORG_ID && (
+        <>
+          <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Trabajador">
+            <NewWorkerForm orgId={ORG_ID} onCreated={() => { setShowNew(false); load() }} onCancel={() => setShowNew(false)} />
+          </Modal>
+          <Modal open={showImport} onClose={() => setShowImport(false)} title="Importar Trabajadores">
+            <ImportWorkersForm orgId={ORG_ID} onDone={() => { setShowImport(false); load() }} onCancel={() => setShowImport(false)} />
+          </Modal>
+        </>
       )}
     </div>
   )
