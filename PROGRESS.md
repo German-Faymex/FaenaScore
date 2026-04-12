@@ -1,153 +1,117 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-11T18:35:00-04:00
+## Ultima actualizacion: 2026-04-12T14:30:00-04:00
 
 ## Estado actual
-- Fase: MVP Semana 1 completada
+- Fase: MVP Semana 1 + polish + deploy COMPLETADOS
 - Branch activo: master
-- Ultimo commit: 8a878c9 — fix: add OrgProvider context for auto org detection
+- Ultimo commit: faf46cd — fix: disable asyncpg prepared-statement cache for supabase pgbouncer
 - Repo: https://github.com/German-Faymex/FaenaScore
+- **Produccion**: https://faenascore-production.up.railway.app
+- **Railway project**: https://railway.com/project/7ec526bb-74bc-4796-bac4-4c89bde2d6bd
+- **Supabase project ref**: sudhcjpiixkkwywapvpe (region sa-east-1)
 
-## Resumen del dia 11 de abril 2026
+## Resumen sesion 12 de abril 2026
 
-### Sesion 1: Investigacion y seleccion de idea (3+ horas)
+### Bloque 1: Formularios CRUD (commit 7259787)
+- Modal reutilizable (ui/Modal.tsx, mobile sheet + desktop center)
+- NewProjectForm + NewWorkerForm (RUT validacion mod-11 cliente)
+- ImportWorkersForm (dropzone Excel/CSV usando endpoint existente)
+- AssignWorkersForm (multi-select con buscador)
+- Wired en Projects.tsx, Workers.tsx, ProjectDetail.tsx
+- Verificado end-to-end con Playwright local
 
-1. **Leimos documento "Investigacion Micro-SaaS IA Abril 2026"** (12 ideas evaluadas)
-2. **Investigacion profunda de RecibosAI**: Descartada (score real 5/10). Boleta electronica obligatoria en Chile desde 2021, SII ya tiene toda la data en XML, Nubox/Defontana/SyncManager ya resuelven esto.
-3. **Investigacion de las 11 ideas restantes** con 5 agentes en paralelo:
-   - **FotoListo**: DESCARTADO (3/10) — MeLi ya ofrece gratis fotos IA, titulos, descripciones, Mercado Clips
-   - **ContractSnap**: DESCARTADO (4/10) — 7+ competidores chilenos (Magnar con inversion de Carey, Cicero, Spektr)
-   - **ExtractaBank**: DESCARTADO (3/10) — Open Banking llega julio 2026, Fintoc/Floid ya tienen APIs, CartolaSimple es gratis
-   - **CalificaRapido**: POSIBLE (6.5/10) — gap real pero OCR manuscrito 7.66% error, profesores pagan poco
-   - **LicitaDoc**: RECOMENDADO (8.5/10) — nadie genera propuestas tecnicas en Chile, LicitaLAB valido mercado con 1000 clientes
-   - **AcreditaMinero**: RECOMENDADO (8/10) — gestion acreditacion contratistas, dolor mensual, mercado con dinero
-   - **ArriendoFacil**: POSIBLE (7.5/10) — corredores independientes, boring business con volumen
-4. **Investigacion profunda de EvalPro** (pivoteado a FaenaScore):
-   - German identifico que el dolor real NO es evaluaciones de oficina, sino decisiones de recontratacion de trabajadores temporales de faena
-   - 1,071,128 subcontratados en Chile, 55-60% de fuerza minera es contratista
-   - Construccion tiene 50% rotacion — la peor de todos los sectores
-   - CERO competencia directa en Chile/LATAM para evaluacion de trabajadores temporales
-   - Score final: 8.5/10
-5. **Informe de justificacion** guardado en `JUSTIFICACION_FAENASCORE.md`
+### Bloque 2: Polish UI (commit 3e82a73)
+- index.html title -> FaenaScore + meta description
+- Skeleton.tsx (Card + Row variants) reemplaza "Cargando..."
+- Empty states con CTAs a crear/importar
+- EvaluateWorker: rehire reason required (>=3 chars) cuando != yes
+- EvaluateWorker mobile: label stack sobre stars (no overflow a 375px)
+- Verificado screenshots mobile 375px: Dashboard, Workers, Evaluate, ProjectDetail
 
-### Sesion 2: Planificacion (1 hora)
+### Bloque 3: Deploy produccion (commits 53d8e9b, faf46cd)
+- ALLOW_MOCK_IN_PROD flag para testing sin Clerk todavia
+- SPA fallback en main.py (sirve index.html para rutas no-/api)
+- Dockerfile CMD: alembic upgrade head && uvicorn
+- .env.example documentado
+- Fix asyncpg statement_cache_size=0 para Supabase transaction pooler
+- Supabase PostgreSQL creada (region sa-east-1, IPv4 shared pooler)
+- Railway project faenascore creado, env vars seteadas, deploy OK
+- Dominio: faenascore-production.up.railway.app
+- DATABASE_URL rotado post-deploy (el primero quedo en chat)
+- Smoke test: /api/health 200 + database connected, SPA routes 200, /api/v1/me OK
 
-6. **Plan de implementacion aprobado** — 3 semanas, backend + frontend + deploy
-7. Exploramos patrones de 5 proyectos existentes:
-   - CasiListo/Fillanyform (backend + frontend patterns)
-   - Dashboard Prevencion de Riesgo (worker tracking, KPIs, Recharts)
-   - Agenda Sala Faymex (RBAC, Excel import, Dockerfile multi-stage)
-   - WhatsApp Bot Faymex (alertas Meta Cloud API)
-
-### Sesion 3: Construccion backend (2 horas)
-
-8. **Backend completo** — FastAPI con 29 endpoints:
-   - 6 modelos SQLAlchemy: Organization, User, OrgMember, Project, Worker, ProjectWorker, Evaluation
-   - 7 routers API: health, auth, organizations, projects, workers, evaluations, dashboard
-   - 5 schemas Pydantic con validacion (RUT modulo 11)
-   - Servicios: rut_validator, score_calculator
-   - Clerk JWT auth con mock mode
-   - Alembic async configurado
-   - Worker import Excel/CSV con openpyxl
-   - Cuadrilla Builder: busqueda por especialidad + score minimo
-   - Dashboard: KPIs, top workers, evaluaciones recientes
-9. **Verificado**: App carga 29 rutas, requiere SQLAlchemy >= 2.0.40 para Python 3.14
-
-### Sesion 4: Construccion frontend (1.5 horas)
-
-10. **Frontend completo** — React 19 + TypeScript + Tailwind v4 + Recharts:
-    - 7 paginas: Dashboard, Projects, ProjectDetail, Workers, WorkerDetail, Evaluate, EvaluateWorker
-    - Componentes: AppShell (sidebar responsive), StarRating (touch 44px+), ScoreBadge (color-coded)
-    - API client tipado (api.ts) con todas las funciones
-    - OrgProvider context para auto-deteccion de organizacion
-    - Clerk auth condicional con mock mode
-    - Build verificado: compila sin errores TypeScript
-
-### Sesion 5: Testing E2E (1 hora)
-
-11. **PostgreSQL local** levantado con Docker Compose (puerto 5433)
-12. **Alembic migration** generada y aplicada — 6 tablas creadas
-13. **Test API con curl** — flujo completo verificado:
-    - Crear org "Faymex SpA"
-    - Crear proyecto "Mantencion Molino SAG" (Minera Escondida, Antofagasta)
-    - Crear 3 trabajadores con RUT validado
-    - Asignar a proyecto
-    - Evaluar Juan Perez (4.6, Si) y Maria Lopez (3.0, Reservas)
-    - Dashboard stats: 3.8 promedio, 50% rehire
-    - Cuadrilla Builder: filtrar soldadores score >= 4 → Juan Perez
-14. **Test UI con Playwright** — flujo completo verificado:
-    - Dashboard con KPIs y datos reales
-    - Tabla trabajadores con scores color-coded
-    - Detalle trabajador con estrellas, recontratacion, historial
-    - Proyecto con equipo y banner "sin evaluar"
-    - Formulario evaluacion: 5 estrellas + rehire "No" + motivo + comentario → guardo exitoso
-    - Dashboard actualizado: 3 evals, score 3.6, 33% rehire
-15. **Repo GitHub** creado y pusheado: https://github.com/German-Faymex/FaenaScore
-
-## Archivos clave
+## Archivos nuevos hoy
 
 | Archivo | Descripcion |
 |---------|-------------|
-| `JUSTIFICACION_FAENASCORE.md` | Informe de por que elegimos FaenaScore |
-| `backend/app/main.py` | FastAPI app, 29 rutas |
-| `backend/app/models/` | 6 modelos SQLAlchemy |
-| `backend/app/api/v1/workers.py` | Cuadrilla Builder + import Excel |
-| `backend/app/api/v1/evaluations.py` | Evaluaciones + batch |
-| `backend/app/services/rut_validator.py` | Validacion RUT chileno modulo 11 |
-| `frontend/src/pages/EvaluateWorker.tsx` | Formulario mobile-first (pagina critica) |
-| `frontend/src/pages/Workers.tsx` | Cuadrilla Builder UI |
-| `frontend/src/pages/WorkerDetail.tsx` | Perfil con scores + Recharts + historial |
-| `frontend/src/components/ui/StarRating.tsx` | Estrellas touch con colores |
-| `frontend/src/lib/org.tsx` | OrgProvider context |
-| `frontend/src/lib/api.ts` | API client tipado |
+| `frontend/src/components/ui/Modal.tsx` | Modal reutilizable responsive |
+| `frontend/src/components/ui/Skeleton.tsx` | Skeleton + CardSkeleton + RowSkeleton |
+| `frontend/src/components/forms/NewProjectForm.tsx` | Form crear proyecto |
+| `frontend/src/components/forms/NewWorkerForm.tsx` | Form crear trabajador con RUT validado |
+| `frontend/src/components/forms/ImportWorkersForm.tsx` | Modal upload Excel/CSV |
+| `frontend/src/components/forms/AssignWorkersForm.tsx` | Multi-select asignar workers |
+| `frontend/src/lib/rut.ts` | Validador RUT cliente (mod 11) |
+| `.env.example` | Doc env vars |
 
-## Decisiones tomadas
+## Env vars produccion (Railway)
 
-| Decision | Razon |
-|----------|-------|
-| Single Dockerfile multi-stage | Patron Agenda Sala, un solo servicio Railway |
-| No Celery/Redis/S3 | Innecesario para MVP, todo es CRUD sincrono |
-| SQLAlchemy >= 2.0.40 | Compatibilidad Python 3.14 (bug con Union types) |
-| PostgreSQL puerto 5433 | Puerto 5432 ocupado por container Fillanyform |
-| OrgProvider auto-create | Primera vez crea org "Mi Empresa", simplifica onboarding |
-| score_average pre-computado | Almacenado en tabla evaluations para queries rapidos |
-| Multi-tenant org_id en URLs | Preparado para multiples clientes desde dia 1 |
-| Estrellas 44px+ tap targets | Mobile-first, evaluacion en terreno con celular |
+- DATABASE_URL: Supabase pooler IPv4 (rotado 12 abr)
+- DEBUG: False
+- AUTH_MOCK_ENABLED: True
+- ALLOW_MOCK_IN_PROD: True **(inseguro, solo testing)**
+- CORS_ORIGINS: ["*"]
 
-## Proximos pasos (para manana)
+## Proximos pasos (para la proxima sesion)
 
-### Prioridad 1: Funcionalidad faltante
-1. **Formulario crear proyecto** — el boton "Nuevo Proyecto" no abre formulario aun
-2. **Formulario crear trabajador** — el boton "Nuevo" no abre formulario aun
-3. **Worker import modal** — subir Excel desde el frontend
-4. **Asignar workers a proyecto** — UI para seleccionar workers y asignarlos
+### Prioridad 1: Seguridad (URGENTE antes de compartir con alguien real)
+1. **Crear app Clerk produccion** — 4 vars: CLERK_SECRET_KEY, CLERK_JWKS_URL, CLERK_ISSUER, CLERK_AUDIENCE + VITE_CLERK_PUBLISHABLE_KEY en build
+2. **Desactivar ALLOW_MOCK_IN_PROD** una vez Clerk funcione
+3. **Restringir CORS_ORIGINS** al dominio real (hoy esta en "*")
 
-### Prioridad 2: Polish UI
-5. **Mobile responsive test** — probar con viewport 375px en Playwright
-6. **Empty states mejorados** — cuando no hay org, guiar al usuario
-7. **Loading skeletons** — reemplazar "Cargando..." con skeleton loaders
-8. **Titulo de pagina** — cambiar "frontend" por "FaenaScore" en index.html
+### Prioridad 2: Decisiones de negocio
+4. **Comprar dominio** faenascore.cl en NIC Chile (~$10k CLP/ano) — opcional, hoy funciona el subdominio Railway
+5. **Landing page** — la home actual va directo al dashboard. Para mostrar a prospectos necesitamos una landing publica con pitch.
 
-### Prioridad 3: Deploy produccion
-9. **Supabase PostgreSQL** — crear DB de produccion
-10. **Clerk produccion** — crear app Clerk, configurar keys
-11. **Railway deploy** — push y verificar
-12. **Dominio** — considerar faenascore.cl o similar
+### Prioridad 3: Features para demo
+6. **Seed data realista** para mostrar a potenciales clientes (3 proyectos, 20 workers, 40 evaluaciones distribuidas)
+7. **Edit project + edit worker** — hoy solo se pueden crear, no editar
+8. **Evaluate flow desde Dashboard** — boton "Evaluar siguiente pendiente" que salta al primer worker sin evaluar del proyecto mas activo
+9. **Export CSV de trabajadores con scores** — util para gerentes de contratistas
 
-### Prioridad 4: Features fase 2
-13. **Filtro por especialidad** en pagina Evaluate (no solo en Workers)
-14. **Batch evaluation** — evaluar multiples workers en secuencia sin salir
-15. **Export CSV** de trabajadores con scores
-16. **Notificaciones WhatsApp** de certificaciones por vencer
+### Prioridad 4: Quality
+10. **Tests backend** — pytest fixtures + tests de RUT validator, score_calculator, endpoints criticos
+11. **Error handling** — el apiFetch cliente deja "[object Object]" cuando backend devuelve array de errores (FastAPI validation). Aplanar a string legible.
+12. **Code splitting frontend** — bundle 708KB, Vite warning. Lazy load Recharts, router, formularios.
 
 ## Problemas conocidos
-- `index.html` title dice "frontend" en vez de "FaenaScore" (cosmético)
-- Botones "Nuevo Proyecto" y "Nuevo Trabajador" no tienen formulario modal aun (solo navegan)
-- No hay forma de asignar workers a proyecto desde el UI (solo via API)
-- No hay validacion de motivo requerido cuando would_rehire != 'yes' en frontend (backend lo acepta null)
+- `CORS_ORIGINS=["*"]` en prod (inseguro pero no critico con auth mock)
+- `AUTH_MOCK_ENABLED=True` en prod: cualquiera es "Dev User" con acceso total
+- Bundle frontend 708KB (Recharts + lucide + Clerk) — sin code splitting
+- apiFetch no maneja bien detail=array de FastAPI (muestra "[object Object]")
+- Backend sin tests (baseline sprint 1 era E2E manual)
 
-## Infraestructura local
-- Backend: `cd backend && python -m uvicorn app.main:app --port 8001`
-- Frontend: `cd frontend && npx vite --port 5180`
-- PostgreSQL: `docker compose up -d` (puerto 5433)
-- Vite proxy apunta a localhost:8001
+## Comandos utiles
+
+```bash
+# Backend local
+cd backend && python -m uvicorn app.main:app --port 8001 --reload
+
+# Frontend local
+cd frontend && npx vite --port 5180
+
+# PostgreSQL local
+docker compose up -d  # puerto 5433
+
+# Deploy (auto al hacer push, pero tambien)
+railway up --detach
+
+# Logs prod
+railway logs
+
+# Ver env vars prod
+railway variables
+
+# Health check prod
+curl -s https://faenascore-production.up.railway.app/api/health
+```
