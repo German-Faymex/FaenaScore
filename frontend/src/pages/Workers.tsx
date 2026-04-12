@@ -7,6 +7,7 @@ import { useDebounce } from '../hooks/useDebounce'
 import { SPECIALTIES } from '../lib/constants'
 import ScoreBadge from '../components/ui/ScoreBadge'
 import Modal from '../components/ui/Modal'
+import { RowSkeleton } from '../components/ui/Skeleton'
 import NewWorkerForm from '../components/forms/NewWorkerForm'
 import ImportWorkersForm from '../components/forms/ImportWorkersForm'
 
@@ -92,11 +93,24 @@ export default function Workers() {
 
       {/* Results */}
       {loading ? (
-        <div className="animate-pulse text-gray-400 py-8 text-center">Cargando...</div>
+        <RowSkeleton count={6} />
       ) : workers.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
           <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p>No se encontraron trabajadores</p>
+          <p className="font-medium text-gray-700">No se encontraron trabajadores</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {search || specialty || minScore ? 'Ajusta los filtros' : 'Agrega tu primer trabajador o importa un Excel'}
+          </p>
+          {!search && !specialty && !minScore && (
+            <div className="flex gap-2 justify-center mt-4">
+              <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-2 border border-gray-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+                <Upload className="w-4 h-4" /> Importar
+              </button>
+              <button onClick={() => setShowNew(true)} className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+                <UserPlus className="w-4 h-4" /> Nuevo
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

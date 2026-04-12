@@ -19,7 +19,9 @@ export default function EvaluateWorker() {
   const [error, setError] = useState('')
 
   const allScoresSet = scores.every((s) => s > 0)
-  const canSubmit = allScoresSet && wouldRehire !== ''
+  const needsReason = wouldRehire === 'reservations' || wouldRehire === 'no'
+  const reasonOk = !needsReason || rehireReason.trim().length >= 3
+  const canSubmit = allScoresSet && wouldRehire !== '' && reasonOk
 
   async function handleSubmit() {
     if (!canSubmit || !projectId || !workerId) return
@@ -60,7 +62,7 @@ export default function EvaluateWorker() {
       {/* Score dimensions */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-5">
         {SCORE_LABELS.map((label, i) => (
-          <div key={label} className="flex items-center justify-between">
+          <div key={label} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm font-medium text-gray-700">{label}</span>
             <StarRating value={scores[i]} onChange={(v) => { const n = [...scores]; n[i] = v; setScores(n) }} size="lg" />
           </div>
@@ -87,14 +89,21 @@ export default function EvaluateWorker() {
           ))}
         </div>
 
-        {(wouldRehire === 'reservations' || wouldRehire === 'no') && (
-          <textarea
-            placeholder="Motivo (requerido)..."
-            value={rehireReason}
-            onChange={(e) => setRehireReason(e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500"
-          />
+        {needsReason && (
+          <div>
+            <textarea
+              placeholder="Motivo (requerido)..."
+              value={rehireReason}
+              onChange={(e) => setRehireReason(e.target.value)}
+              rows={2}
+              className={`w-full px-3 py-2 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 ${
+                rehireReason.trim().length > 0 && !reasonOk ? 'border-red-400' : 'border-gray-300'
+              }`}
+            />
+            {!reasonOk && rehireReason.trim().length > 0 && (
+              <p className="text-xs text-red-600 mt-1">El motivo debe tener al menos 3 caracteres</p>
+            )}
+          </div>
         )}
       </div>
 

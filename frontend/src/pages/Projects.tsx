@@ -5,6 +5,7 @@ import { api, type Project } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { PROJECT_STATUSES } from '../lib/constants'
 import Modal from '../components/ui/Modal'
+import { CardSkeleton } from '../components/ui/Skeleton'
 import NewProjectForm from '../components/forms/NewProjectForm'
 
 export default function Projects() {
@@ -48,11 +49,15 @@ export default function Projects() {
       </div>
 
       {loading ? (
-        <div className="animate-pulse text-gray-400 py-8 text-center">Cargando...</div>
+        <CardSkeleton count={4} />
       ) : projects.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
           <FolderKanban className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p>No hay proyectos</p>
+          <p className="font-medium text-gray-700">No hay proyectos</p>
+          <p className="text-sm text-gray-500 mt-1">Crea tu primer proyecto para comenzar a evaluar trabajadores</p>
+          <button onClick={() => setShowNew(true)} className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Crear Proyecto
+          </button>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
