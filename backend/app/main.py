@@ -2,9 +2,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.health import router as health_router
@@ -23,9 +23,11 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting FaenaScore API", debug=settings.DEBUG)
-    if not settings.DEBUG and settings.AUTH_MOCK_ENABLED:
-        raise RuntimeError("AUTH_MOCK_ENABLED=True is not allowed when DEBUG=False.")
+    logger.info("Starting FaenaScore API", debug=settings.DEBUG, mock_auth=settings.AUTH_MOCK_ENABLED)
+    if not settings.DEBUG and settings.AUTH_MOCK_ENABLED and not settings.ALLOW_MOCK_IN_PROD:
+        raise RuntimeError("AUTH_MOCK_ENABLED=True is not allowed when DEBUG=False. Set ALLOW_MOCK_IN_PROD=True to override (testing only).")
+    if settings.AUTH_MOCK_ENABLED and settings.ALLOW_MOCK_IN_PROD:
+        logger.warning("Running with mock auth in production — anyone can access all data. Disable ALLOW_MOCK_IN_PROD before real launch.")
     yield
     await engine.dispose()
     logger.info("Shutting down FaenaScore API")
@@ -63,4 +65,16 @@ app.include_router(dashboard_router, prefix="/api/v1")
 # Serve frontend static files (production: built by Dockerfile)
 static_dir = Path(__file__).parent.parent / "static"
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    assets_dir = static_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+    index_file = static_dir / "index.html"
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404)
+        candidate = static_dir / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(str(candidate))
+        return FileResponse(str(index_file))

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     # Auth
     AUTH_MOCK_ENABLED: bool = True
+    ALLOW_MOCK_IN_PROD: bool = False
     CLERK_SECRET_KEY: str = ""
     CLERK_JWKS_URL: str = ""
     CLERK_ISSUER: str = ""
