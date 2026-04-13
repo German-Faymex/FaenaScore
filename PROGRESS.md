@@ -1,11 +1,22 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-12T14:30:00-04:00
+## Ultima actualizacion: 2026-04-13T17:45:00-04:00
 
 ## Estado actual
-- Fase: MVP Semana 1 + polish + deploy COMPLETADOS
+- Fase: MVP Semana 1 + polish + deploy + Clerk auth real COMPLETADOS
 - Branch activo: master
-- Ultimo commit: faf46cd — fix: disable asyncpg prepared-statement cache for supabase pgbouncer
+- Ultimo commit: 86a6aa3 — fix: register Clerk token getter synchronously before OrgProvider mounts
+
+## Sesion 13 abr 2026 — Clerk auth real en produccion
+- Clerk Development instance creada (willing-monitor-52.clerk.accounts.dev)
+- 4 env vars seteadas en Railway: CLERK_SECRET_KEY, CLERK_JWKS_URL, CLERK_ISSUER, VITE_CLERK_PUBLISHABLE_KEY
+- AUTH_MOCK_ENABLED=False, ALLOW_MOCK_IN_PROD=False
+- CORS_ORIGINS restringido al dominio prod
+- DATABASE_URL rotado (password nuevo Supabase)
+- Dockerfile: ARG/ENV para pasar VITE_CLERK_PUBLISHABLE_KEY al build stage
+- alembic/env.py: connect_args statement_cache_size=0 para pgbouncer
+- App.tsx: SignedIn/SignedOut gate + setAuthTokenGetter sincrono (bug: useEffect corre despues de OrgProvider)
+- Verificado end-to-end: login con Clerk, dashboard carga con Bearer token
 - Repo: https://github.com/German-Faymex/FaenaScore
 - **Produccion**: https://faenascore-production.up.railway.app
 - **Railway project**: https://railway.com/project/7ec526bb-74bc-4796-bac4-4c89bde2d6bd
