@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, SignIn, useAuth } from '@clerk/clerk-react'
 import { OrgProvider } from './lib/org'
@@ -36,9 +35,7 @@ function AppRoutes() {
 
 function AuthenticatedApp() {
   const { getToken } = useAuth()
-  useEffect(() => {
-    setAuthTokenGetter(() => getToken())
-  }, [getToken])
+  setAuthTokenGetter(() => getToken())
   return <AppRoutes />
 }
 
