@@ -1,11 +1,25 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-13T17:45:00-04:00
+## Ultima actualizacion: 2026-04-14T20:00:00-04:00
 
 ## Estado actual
-- Fase: MVP Semana 1 + polish + deploy + Clerk auth real COMPLETADOS
+- Fase: Prioridades 2-5 del sprint cerradas
 - Branch activo: master
-- Ultimo commit: 86a6aa3 — fix: register Clerk token getter synchronously before OrgProvider mounts
+- Ultimo commit: 0e127d7 — feat: edit forms, evaluate next, CSV export, error formatting, code split, tests
+
+## Sesion 14 abr 2026 — Landing + features + quality
+- **Landing page publica** en `/`, dashboard movido a `/app/*`, Clerk sign-in en `/sign-in`
+  - `frontend/src/pages/Landing.tsx` con hero, problem, 6 features, CTA, footer
+  - App.tsx reestructurado con SignedIn/SignedOut gate en `/app/*`
+  - AppShell + todos los Link/navigate actualizados a `/app/*`
+- **Seed demo script**: `backend/scripts/seed_demo.py` — 3 proyectos + 20 workers (RUTs validos) + ~40 evals
+  - Uso: `python -m scripts.seed_demo --org-slug <slug>` o `--org-id <uuid>` + `--wipe` opcional
+- **Edit forms**: NewProjectForm/NewWorkerForm aceptan `initial` -> modo edit. Boton Pencil en ProjectDetail y WorkerDetail
+- **Evaluate next pending**: GET `/dashboard/next-evaluation` (pick proyecto activo con mas pendientes + primer worker). Banner en Dashboard con CTA
+- **Export CSV workers**: GET `/workers/export.csv` (RUT, nombre, especialidad, telefono, email, activo, evaluaciones, score). Boton Download en Workers page
+- **Fix apiFetch**: formatApiError aplana FastAPI detail=array a mensaje legible con campo
+- **Code splitting**: lazy load paginas -> bundle inicial 722KB -> 281KB. Recharts (347KB) queda solo en WorkerDetail
+- **Backend tests**: `tests/` con 21 tests unit (rut_validator + score_calculator) — `pytest -q` pasa
 
 ## Sesion 13 abr 2026 — Clerk auth real en produccion
 - Clerk Development instance creada (willing-monitor-52.clerk.accounts.dev)
