@@ -1,22 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Phone, Mail } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, Pencil } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api, type WorkerDetail as WorkerDetailType } from '../lib/api'
 import { useOrg } from '../lib/org'
 import StarRating from '../components/ui/StarRating'
 import ScoreBadge from '../components/ui/ScoreBadge'
+import Modal from '../components/ui/Modal'
+import NewWorkerForm from '../components/forms/NewWorkerForm'
 
 export default function WorkerDetail() {
   const { orgId: ORG_ID } = useOrg()
   const { id } = useParams()
   const [worker, setWorker] = useState<WorkerDetailType | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showEdit, setShowEdit] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!id || !ORG_ID) return
     api.getWorker(ORG_ID!, id).then(setWorker).catch(() => {}).finally(() => setLoading(false))
   }, [id, ORG_ID])
+
+  useEffect(() => { load() }, [load])
 
   if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
   if (!worker) return <div className="text-gray-500">Trabajador no encontrado</div>
@@ -34,6 +39,9 @@ export default function WorkerDetail() {
           <p className="text-sm text-gray-500">{worker.specialty} · {worker.rut}</p>
         </div>
         <ScoreBadge score={worker.avg_score} />
+        <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="Editar">
+          <Pencil className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Contact */}
@@ -106,6 +114,17 @@ export default function WorkerDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {ORG_ID && (
+        <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Editar Trabajador">
+          <NewWorkerForm
+            orgId={ORG_ID}
+            initial={worker}
+            onCreated={() => { setShowEdit(false); load() }}
+            onCancel={() => setShowEdit(false)}
+          />
+        </Modal>
       )}
 
       {/* Evaluation history */}

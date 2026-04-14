@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,8 +10,17 @@ from app.dependencies import get_org_member
 from app.models.evaluation import Evaluation
 from app.models.organization import OrgMember
 from app.models.project import Project
+from app.models.project_worker import ProjectWorker
 from app.models.worker import Worker
 from app.schemas.dashboard import DashboardStats, RecentEvaluationItem, SpecialtyCount, TopWorkerItem
+
+
+class NextEvaluationResponse(BaseModel):
+    project_id: uuid.UUID | None = None
+    project_name: str | None = None
+    worker_id: uuid.UUID | None = None
+    worker_name: str | None = None
+    pending_count: int = 0
 
 router = APIRouter(prefix="/organizations/{org_id}/dashboard", tags=["dashboard"])
 
@@ -82,6 +92,75 @@ async def get_top_workers(
             avg_score=round(avg_s, 2), evaluation_count=ec, would_rehire_pct=pct,
         ))
     return items
+
+
+@router.get("/next-evaluation", response_model=NextEvaluationResponse)
+async def get_next_pending_evaluation(
+    org_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _member: OrgMember = Depends(get_org_member),
+):
+    """Returns the next pending evaluation: the project with most unevaluated
+    assigned workers, and the first worker in that project without an evaluation."""
+
+    evaluated_subq = (
+        select(Evaluation.project_id, Evaluation.worker_id)
+        .where(Evaluation.org_id == org_id)
+        .subquery()
+    )
+
+    # Count unevaluated workers per active project
+    pending_per_project = await db.execute(
+        select(
+            Project.id, Project.name, func.count(ProjectWorker.worker_id).label("pending"),
+        )
+        .join(ProjectWorker, ProjectWorker.project_id == Project.id)
+        .outerjoin(
+            evaluated_subq,
+            (evaluated_subq.c.project_id == ProjectWorker.project_id)
+            & (evaluated_subq.c.worker_id == ProjectWorker.worker_id),
+        )
+        .where(
+            Project.org_id == org_id,
+            Project.status == "active",
+            evaluated_subq.c.worker_id.is_(None),
+        )
+        .group_by(Project.id, Project.name)
+        .order_by(func.count(ProjectWorker.worker_id).desc())
+        .limit(1)
+    )
+    top = pending_per_project.first()
+    if not top:
+        return NextEvaluationResponse()
+
+    project_id, project_name, pending = top
+
+    worker_row = (await db.execute(
+        select(Worker.id, Worker.first_name, Worker.last_name)
+        .join(ProjectWorker, ProjectWorker.worker_id == Worker.id)
+        .outerjoin(
+            evaluated_subq,
+            (evaluated_subq.c.project_id == ProjectWorker.project_id)
+            & (evaluated_subq.c.worker_id == ProjectWorker.worker_id),
+        )
+        .where(
+            ProjectWorker.project_id == project_id,
+            evaluated_subq.c.worker_id.is_(None),
+        )
+        .order_by(Worker.last_name.asc(), Worker.first_name.asc())
+        .limit(1)
+    )).first()
+
+    if not worker_row:
+        return NextEvaluationResponse()
+
+    return NextEvaluationResponse(
+        project_id=project_id,
+        project_name=project_name,
+        worker_id=worker_row.id,
+        worker_name=f"{worker_row.first_name} {worker_row.last_name}",
+        pending_count=pending,
+    )
 
 
 @router.get("/recent-evaluations", response_model=list[RecentEvaluationItem])

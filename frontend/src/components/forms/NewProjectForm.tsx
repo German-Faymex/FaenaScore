@@ -1,18 +1,22 @@
 import { useState, type FormEvent } from 'react'
-import { api } from '../../lib/api'
+import { api, type Project } from '../../lib/api'
+import { PROJECT_STATUSES } from '../../lib/constants'
 
 interface Props {
   orgId: string
+  initial?: Project
   onCreated: () => void
   onCancel: () => void
 }
 
-export default function NewProjectForm({ orgId, onCreated, onCancel }: Props) {
-  const [name, setName] = useState('')
-  const [clientName, setClientName] = useState('')
-  const [location, setLocation] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+export default function NewProjectForm({ orgId, initial, onCreated, onCancel }: Props) {
+  const isEdit = Boolean(initial)
+  const [name, setName] = useState(initial?.name ?? '')
+  const [clientName, setClientName] = useState(initial?.client_name ?? '')
+  const [location, setLocation] = useState(initial?.location ?? '')
+  const [startDate, setStartDate] = useState(initial?.start_date ?? '')
+  const [endDate, setEndDate] = useState(initial?.end_date ?? '')
+  const [status, setStatus] = useState(initial?.status ?? 'active')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,16 +29,27 @@ export default function NewProjectForm({ orgId, onCreated, onCancel }: Props) {
     }
     setSubmitting(true)
     try {
-      await api.createProject(orgId, {
+      const payload = {
         name: name.trim(),
-        client_name: clientName.trim() || undefined,
-        location: location.trim() || undefined,
-        start_date: startDate || undefined,
-        end_date: endDate || undefined,
-      })
+        client_name: clientName.trim() || null,
+        location: location.trim() || null,
+        start_date: startDate || null,
+        end_date: endDate || null,
+      }
+      if (isEdit && initial) {
+        await api.updateProject(orgId, initial.id, { ...payload, status })
+      } else {
+        await api.createProject(orgId, {
+          name: payload.name,
+          client_name: payload.client_name || undefined,
+          location: payload.location || undefined,
+          start_date: payload.start_date || undefined,
+          end_date: payload.end_date || undefined,
+        })
+      }
       onCreated()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear proyecto')
+      setError(err instanceof Error ? err.message : 'Error al guardar proyecto')
     } finally {
       setSubmitting(false)
     }
@@ -50,22 +65,30 @@ export default function NewProjectForm({ orgId, onCreated, onCancel }: Props) {
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-        <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} className={inputCls} placeholder="Minera Escondida" />
+        <input type="text" value={clientName ?? ''} onChange={(e) => setClientName(e.target.value)} className={inputCls} placeholder="Minera Escondida" />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Ubicacion</label>
-        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className={inputCls} placeholder="Antofagasta" />
+        <input type="text" value={location ?? ''} onChange={(e) => setLocation(e.target.value)} className={inputCls} placeholder="Antofagasta" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Inicio</label>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
+          <input type="date" value={startDate ?? ''} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
+          <input type="date" value={endDate ?? ''} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
         </div>
       </div>
+      {isEdit && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+            {PROJECT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{error}</p>}
 
@@ -74,7 +97,7 @@ export default function NewProjectForm({ orgId, onCreated, onCancel }: Props) {
           Cancelar
         </button>
         <button type="submit" disabled={submitting} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-          {submitting ? 'Creando...' : 'Crear Proyecto'}
+          {submitting ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear Proyecto'}
         </button>
       </div>
     </form>

@@ -7,6 +7,32 @@ export function setAuthTokenGetter(getter: TokenGetter) {
   _getAuthToken = getter
 }
 
+function formatApiError(body: unknown, status: number): string {
+  if (!body || typeof body !== 'object') return `Error ${status}`
+  const detail = (body as { detail?: unknown }).detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    // FastAPI validation errors: [{loc, msg, type}, ...]
+    const msgs = detail
+      .map((d) => {
+        if (typeof d === 'string') return d
+        if (d && typeof d === 'object') {
+          const m = (d as { msg?: string; loc?: unknown[] })
+          const field = Array.isArray(m.loc) ? m.loc.slice(1).join('.') : ''
+          return field ? `${field}: ${m.msg}` : m.msg
+        }
+        return null
+      })
+      .filter(Boolean)
+    if (msgs.length) return msgs.join('; ')
+  }
+  if (detail && typeof detail === 'object') {
+    const msg = (detail as { detail?: string }).detail
+    if (typeof msg === 'string') return msg
+  }
+  return `Error ${status}`
+}
+
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -27,7 +53,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(body.detail || `Error ${res.status}`)
+    throw new Error(formatApiError(body, res.status))
   }
 
   if (res.status === 204) return undefined as T
@@ -237,4 +263,25 @@ export const api = {
   getStats: (orgId: string) => apiFetch<DashboardStats>(`/organizations/${orgId}/dashboard/stats`),
   getTopWorkers: (orgId: string) => apiFetch<TopWorker[]>(`/organizations/${orgId}/dashboard/top-workers`),
   getRecentEvaluations: (orgId: string) => apiFetch<RecentEvaluation[]>(`/organizations/${orgId}/dashboard/recent-evaluations`),
+  getNextEvaluation: (orgId: string) => apiFetch<NextEvaluation>(`/organizations/${orgId}/dashboard/next-evaluation`),
+
+  // Workers export (returns Blob, with auth header)
+  exportWorkersCsv: async (orgId: string): Promise<Blob> => {
+    const headers: Record<string, string> = {}
+    if (_getAuthToken) {
+      const token = await _getAuthToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    }
+    const res = await fetch(`${API_BASE}/organizations/${orgId}/workers/export.csv`, { headers })
+    if (!res.ok) throw new Error('Error al exportar')
+    return res.blob()
+  },
+}
+
+export interface NextEvaluation {
+  project_id: string | null
+  project_name: string | null
+  worker_id: string | null
+  worker_name: string | null
+  pending_count: number
 }

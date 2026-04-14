@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, ClipboardCheck, UserPlus } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, UserPlus, Pencil } from 'lucide-react'
 import { api, type Project, type ProjectWorkerItem } from '../lib/api'
 import { useOrg } from '../lib/org'
 import ScoreBadge from '../components/ui/ScoreBadge'
 import Modal from '../components/ui/Modal'
 import AssignWorkersForm from '../components/forms/AssignWorkersForm'
+import NewProjectForm from '../components/forms/NewProjectForm'
 
 export default function ProjectDetail() {
   const { orgId: ORG_ID } = useOrg()
@@ -14,6 +15,7 @@ export default function ProjectDetail() {
   const [workers, setWorkers] = useState<ProjectWorkerItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showAssign, setShowAssign] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
 
   const load = useCallback(async () => {
     if (!id || !ORG_ID) return
@@ -39,10 +41,13 @@ export default function ProjectDetail() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link to="/app/projects" className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
           {project.client_name && <p className="text-sm text-gray-500">{project.client_name} · {project.location}</p>}
         </div>
+        <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="Editar">
+          <Pencil className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Evaluate button */}
@@ -97,15 +102,25 @@ export default function ProjectDetail() {
       </div>
 
       {ORG_ID && id && (
-        <Modal open={showAssign} onClose={() => setShowAssign(false)} title="Asignar Trabajadores" size="lg">
-          <AssignWorkersForm
-            orgId={ORG_ID}
-            projectId={id}
-            excludeIds={workers.map((w) => w.id)}
-            onAssigned={() => { setShowAssign(false); load() }}
-            onCancel={() => setShowAssign(false)}
-          />
-        </Modal>
+        <>
+          <Modal open={showAssign} onClose={() => setShowAssign(false)} title="Asignar Trabajadores" size="lg">
+            <AssignWorkersForm
+              orgId={ORG_ID}
+              projectId={id}
+              excludeIds={workers.map((w) => w.id)}
+              onAssigned={() => { setShowAssign(false); load() }}
+              onCancel={() => setShowAssign(false)}
+            />
+          </Modal>
+          <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Editar Proyecto">
+            <NewProjectForm
+              orgId={ORG_ID}
+              initial={project}
+              onCreated={() => { setShowEdit(false); load() }}
+              onCancel={() => setShowEdit(false)}
+            />
+          </Modal>
+        </>
       )}
     </div>
   )

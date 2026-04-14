@@ -1,7 +1,9 @@
+import csv
 import io
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -111,6 +113,52 @@ async def create_worker(
         id=worker.id, rut=worker.rut, first_name=worker.first_name, last_name=worker.last_name,
         specialty=worker.specialty, phone=worker.phone, email=worker.email, is_active=worker.is_active,
         created_at=worker.created_at,
+    )
+
+
+@router.get("/export.csv")
+async def export_workers_csv(
+    org_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _member: OrgMember = Depends(get_org_member),
+):
+    stmt = (
+        select(
+            Worker.rut,
+            Worker.first_name,
+            Worker.last_name,
+            Worker.specialty,
+            Worker.phone,
+            Worker.email,
+            Worker.is_active,
+            func.count(Evaluation.id).label("eval_count"),
+            func.avg(Evaluation.score_average).label("avg_score"),
+        )
+        .outerjoin(Evaluation, Evaluation.worker_id == Worker.id)
+        .where(Worker.org_id == org_id)
+        .group_by(Worker.id)
+        .order_by(Worker.last_name.asc(), Worker.first_name.asc())
+    )
+    rows = (await db.execute(stmt)).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "RUT", "Nombre", "Apellido", "Especialidad", "Telefono", "Email",
+        "Activo", "Evaluaciones", "Score Promedio",
+    ])
+    for r in rows:
+        writer.writerow([
+            r.rut, r.first_name, r.last_name, r.specialty, r.phone or "", r.email or "",
+            "Si" if r.is_active else "No", r.eval_count or 0,
+            f"{round(r.avg_score, 2)}" if r.avg_score is not None else "",
+        ])
+
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="trabajadores.csv"'},
     )
 
 

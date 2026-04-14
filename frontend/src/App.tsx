@@ -1,32 +1,36 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, SignIn, useAuth } from '@clerk/clerk-react'
 import { OrgProvider } from './lib/org'
 import AppShell from './components/layout/AppShell'
 import Landing from './pages/Landing'
-import Dashboard from './pages/Dashboard'
-import Projects from './pages/Projects'
-import ProjectDetail from './pages/ProjectDetail'
-import Workers from './pages/Workers'
-import WorkerDetail from './pages/WorkerDetail'
-import Evaluate from './pages/Evaluate'
-import EvaluateWorker from './pages/EvaluateWorker'
 import { setAuthTokenGetter } from './lib/api'
+
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Projects = lazy(() => import('./pages/Projects'))
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
+const Workers = lazy(() => import('./pages/Workers'))
+const WorkerDetail = lazy(() => import('./pages/WorkerDetail'))
+const Evaluate = lazy(() => import('./pages/Evaluate'))
+const EvaluateWorker = lazy(() => import('./pages/EvaluateWorker'))
 
 const clerkEnabled = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) &&
   import.meta.env.VITE_AUTH_MOCK_ENABLED !== 'true'
+
+const PageFallback = () => <div className="animate-pulse text-gray-400 p-6">Cargando...</div>
 
 function ProtectedApp() {
   return (
     <OrgProvider>
       <Routes>
         <Route element={<AppShell />}>
-          <Route index element={<Dashboard />} />
-          <Route path="projects" element={<Projects />} />
-          <Route path="projects/:id" element={<ProjectDetail />} />
-          <Route path="workers" element={<Workers />} />
-          <Route path="workers/:id" element={<WorkerDetail />} />
-          <Route path="evaluate" element={<Evaluate />} />
-          <Route path="evaluate/:projectId/:workerId" element={<EvaluateWorker />} />
+          <Route index element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
+          <Route path="projects" element={<Suspense fallback={<PageFallback />}><Projects /></Suspense>} />
+          <Route path="projects/:id" element={<Suspense fallback={<PageFallback />}><ProjectDetail /></Suspense>} />
+          <Route path="workers" element={<Suspense fallback={<PageFallback />}><Workers /></Suspense>} />
+          <Route path="workers/:id" element={<Suspense fallback={<PageFallback />}><WorkerDetail /></Suspense>} />
+          <Route path="evaluate" element={<Suspense fallback={<PageFallback />}><Evaluate /></Suspense>} />
+          <Route path="evaluate/:projectId/:workerId" element={<Suspense fallback={<PageFallback />}><EvaluateWorker /></Suspense>} />
         </Route>
       </Routes>
     </OrgProvider>

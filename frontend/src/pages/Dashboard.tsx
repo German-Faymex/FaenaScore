@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, FolderKanban, ClipboardCheck, TrendingUp } from 'lucide-react'
-import { api, type DashboardStats, type TopWorker, type RecentEvaluation } from '../lib/api'
+import { api, type DashboardStats, type TopWorker, type RecentEvaluation, type NextEvaluation } from '../lib/api'
 import { useOrg } from '../lib/org'
 import ScoreBadge from '../components/ui/ScoreBadge'
 
@@ -10,20 +10,23 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [topWorkers, setTopWorkers] = useState<TopWorker[]>([])
   const [recent, setRecent] = useState<RecentEvaluation[]>([])
+  const [nextEval, setNextEval] = useState<NextEvaluation | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!ORG_ID) return
     async function load() {
       try {
-        const [s, tw, re] = await Promise.all([
+        const [s, tw, re, ne] = await Promise.all([
           api.getStats(ORG_ID!),
           api.getTopWorkers(ORG_ID!),
           api.getRecentEvaluations(ORG_ID!),
+          api.getNextEvaluation(ORG_ID!),
         ])
         setStats(s)
         setTopWorkers(tw)
         setRecent(re)
+        setNextEval(ne)
       } catch {
         // Will fail without DB — expected in dev without docker
       } finally {
@@ -38,6 +41,21 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+
+      {nextEval && nextEval.project_id && nextEval.worker_id && (
+        <Link
+          to={`/app/evaluate/${nextEval.project_id}/${nextEval.worker_id}`}
+          className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl p-4 hover:bg-blue-100 transition-colors"
+        >
+          <div>
+            <p className="font-medium text-blue-900">Evaluar siguiente pendiente</p>
+            <p className="text-sm text-blue-700">
+              {nextEval.worker_name} · {nextEval.project_name} · {nextEval.pending_count} pendientes
+            </p>
+          </div>
+          <ClipboardCheck className="w-5 h-5 text-blue-700" />
+        </Link>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

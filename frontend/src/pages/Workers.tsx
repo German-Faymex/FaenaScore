@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Filter, UserPlus, Users, Upload } from 'lucide-react'
+import { Search, Filter, UserPlus, Users, Upload, Download } from 'lucide-react'
 import { api, type Worker } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { useDebounce } from '../hooks/useDebounce'
@@ -46,6 +46,26 @@ export default function Workers() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Trabajadores</h1>
         <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              if (!ORG_ID) return
+              try {
+                const blob = await api.exportWorkersCsv(ORG_ID)
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = 'trabajadores.csv'
+                a.click()
+                URL.revokeObjectURL(url)
+              } catch (e) {
+                alert(e instanceof Error ? e.message : 'Error al exportar')
+              }
+            }}
+            className="flex items-center gap-2 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50"
+            title="Exportar CSV"
+          >
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Exportar</span>
+          </button>
           <button onClick={() => setShowImport(true)} className="flex items-center gap-2 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
             <Upload className="w-4 h-4" /> <span className="hidden sm:inline">Importar</span>
           </button>
