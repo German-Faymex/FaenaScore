@@ -129,7 +129,7 @@ export default function Workers() {
                 {workers.map((w) => (
                   <tr key={w.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <Link to={`/workers/${w.id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                      <Link to={`/app/workers/${w.id}`} className="font-medium text-gray-900 hover:text-blue-600">
                         {w.first_name} {w.last_name}
                       </Link>
                     </td>

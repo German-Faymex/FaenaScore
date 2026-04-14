@@ -41,7 +41,7 @@ export default function EvaluateWorker() {
         rehire_reason: rehireReason || undefined,
         comment: comment || undefined,
       })
-      navigate(`/projects/${projectId}`)
+      navigate(`/app/projects/${projectId}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al guardar')
     } finally {

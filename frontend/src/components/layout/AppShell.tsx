@@ -3,10 +3,10 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { LayoutDashboard, FolderKanban, Users, ClipboardCheck, Menu, X } from 'lucide-react'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/projects', icon: FolderKanban, label: 'Proyectos' },
-  { to: '/workers', icon: Users, label: 'Trabajadores' },
-  { to: '/evaluate', icon: ClipboardCheck, label: 'Evaluar' },
+  { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/app/projects', icon: FolderKanban, label: 'Proyectos' },
+  { to: '/app/workers', icon: Users, label: 'Trabajadores' },
+  { to: '/app/evaluate', icon: ClipboardCheck, label: 'Evaluar' },
 ]
 
 export default function AppShell() {
@@ -32,7 +32,7 @@ export default function AppShell() {
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
+              end={to === '/app'}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${

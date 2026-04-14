@@ -56,7 +56,7 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-2">
               {topWorkers.map((w) => (
-                <Link key={w.id} to={`/workers/${w.id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+                <Link key={w.id} to={`/app/workers/${w.id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{w.full_name}</p>
                     <p className="text-xs text-gray-500">{w.specialty} · {w.evaluation_count} evals</p>

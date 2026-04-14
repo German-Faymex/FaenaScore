@@ -62,7 +62,7 @@ export default function Projects() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {projects.map((p) => (
-            <Link key={p.id} to={`/projects/${p.id}`} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all">
+            <Link key={p.id} to={`/app/projects/${p.id}`} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-semibold text-gray-900">{p.name}</h3>

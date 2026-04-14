@@ -32,7 +32,7 @@ export default function Evaluate() {
       ) : (
         <div className="grid gap-3">
           {projects.map((p) => (
-            <Link key={p.id} to={`/projects/${p.id}`} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all">
+            <Link key={p.id} to={`/app/projects/${p.id}`} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all">
               <h3 className="font-semibold text-gray-900">{p.name}</h3>
               {p.client_name && <p className="text-sm text-gray-500">{p.client_name}</p>}
               <div className="flex gap-4 mt-2 text-xs text-gray-500">

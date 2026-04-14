@@ -38,7 +38,7 @@ export default function ProjectDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link to="/projects" className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
+        <Link to="/app/projects" className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
           {project.client_name && <p className="text-sm text-gray-500">{project.client_name} · {project.location}</p>}
@@ -53,7 +53,7 @@ export default function ProjectDetail() {
             <p className="text-sm text-blue-700">Completa las evaluaciones del equipo</p>
           </div>
           <Link
-            to={`/evaluate/${id}/${unevaluated[0].id}`}
+            to={`/app/evaluate/${id}/${unevaluated[0].id}`}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
           >
             <ClipboardCheck className="w-4 h-4" /> Evaluar
@@ -76,7 +76,7 @@ export default function ProjectDetail() {
             {workers.map((w) => (
               <div key={w.id} className="flex items-center justify-between px-4 py-3">
                 <div>
-                  <Link to={`/workers/${w.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
+                  <Link to={`/app/workers/${w.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
                     {w.first_name} {w.last_name}
                   </Link>
                   <p className="text-xs text-gray-500">{w.specialty}</p>
@@ -85,7 +85,7 @@ export default function ProjectDetail() {
                   {w.evaluated ? (
                     <ScoreBadge score={w.score_in_project} size="sm" />
                   ) : (
-                    <Link to={`/evaluate/${id}/${w.id}`} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium hover:bg-blue-200">
+                    <Link to={`/app/evaluate/${id}/${w.id}`} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium hover:bg-blue-200">
                       Evaluar
                     </Link>
                   )}
