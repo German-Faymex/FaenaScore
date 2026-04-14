@@ -21,7 +21,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, insert, select, text
+
+
+async def _relax_timeout(session) -> None:
+    await session.execute(text("SET LOCAL statement_timeout = '60s'"))
 
 from app.database import async_session, engine
 from app.models.evaluation import Evaluation
@@ -121,114 +125,137 @@ async def wipe_org_data(session, org_id: uuid.UUID) -> None:
 
 async def seed(org: Organization, wipe: bool) -> dict:
     rng = random.Random(42)
-    async with async_session() as session:
-        if wipe:
+
+    # 1) Wipe in its own small transaction
+    if wipe:
+        async with async_session() as session:
+            await _relax_timeout(session)
             await wipe_org_data(session, org.id)
 
-        # Projects
-        projects: list[Project] = []
-        statuses_dates = [
-            ("active", date.today() - timedelta(days=30), date.today() + timedelta(days=60)),
-            ("active", date.today() - timedelta(days=60), date.today() + timedelta(days=30)),
-            ("completed", date.today() - timedelta(days=180), date.today() - timedelta(days=30)),
-        ]
-        for i, (status, start, end) in enumerate(statuses_dates):
-            p = Project(
-                org_id=org.id,
-                name=PROJECT_NAMES[i],
-                client_name=CLIENTS[i % len(CLIENTS)],
-                location=LOCATIONS[i % len(LOCATIONS)],
-                start_date=start,
-                end_date=end,
-                status=status,
-            )
-            session.add(p)
-            projects.append(p)
-        await session.flush()
-
-        # Workers
-        workers: list[Worker] = []
-        existing_ruts = set(
-            r for (r,) in (await session.execute(
-                select(Worker.rut).where(Worker.org_id == org.id)
-            )).all()
-        )
-        for i in range(20):
-            rut = generate_rut(i + 1)
-            if rut in existing_ruts:
-                continue
-            w = Worker(
-                org_id=org.id,
-                rut=rut,
-                first_name=rng.choice(FIRST_NAMES),
-                last_name=rng.choice(LAST_NAMES),
-                specialty=rng.choice(SPECIALTIES),
-                phone=f"+569{rng.randint(10000000, 99999999)}",
-                email=None,
-                is_active=True,
-            )
-            session.add(w)
-            workers.append(w)
-        await session.flush()
-
-        # Assignments: each project gets 10-14 workers (overlapping)
-        assignments: dict[uuid.UUID, list[Worker]] = {}
-        for p in projects:
-            count = rng.randint(10, min(14, len(workers)))
-            team = rng.sample(workers, count)
-            assignments[p.id] = team
-            for w in team:
-                session.add(ProjectWorker(project_id=p.id, worker_id=w.id))
-        await session.flush()
-
-        # Evaluations: ~40 distributed across projects
-        evals_created = 0
-        target = 40
-        seen: set[tuple[uuid.UUID, uuid.UUID]] = set()
-        while evals_created < target:
-            p = rng.choice(projects)
-            team = assignments[p.id]
-            w = rng.choice(team)
-            key = (p.id, w.id)
-            if key in seen:
-                continue
-            seen.add(key)
-
-            # Realistic distribution: weighted toward 3-5
-            scores = [rng.choices([1, 2, 3, 4, 5], weights=[2, 5, 20, 40, 33])[0] for _ in range(5)]
-            avg = compute_average(*scores)
-            if avg >= 4.0:
-                rehire = rng.choices(["yes", "reservations"], weights=[85, 15])[0]
-            elif avg >= 3.0:
-                rehire = rng.choices(["yes", "reservations", "no"], weights=[40, 45, 15])[0]
-            else:
-                rehire = rng.choices(["reservations", "no"], weights=[30, 70])[0]
-
-            comment = rng.choice(REHIRE_COMMENTS[rehire]) if rng.random() < 0.6 else None
-            reason = comment if rehire != "yes" and comment else None
-
-            session.add(Evaluation(
-                org_id=org.id,
-                project_id=p.id,
-                worker_id=w.id,
-                score_quality=scores[0],
-                score_safety=scores[1],
-                score_punctuality=scores[2],
-                score_teamwork=scores[3],
-                score_technical=scores[4],
-                score_average=avg,
-                would_rehire=rehire,
-                rehire_reason=reason,
-                comment=comment,
-            ))
-            evals_created += 1
-
-        await session.commit()
-        return {
-            "projects": len(projects),
-            "workers": len(workers),
-            "evaluations": evals_created,
+    # 2) Bulk insert projects (returning ids via RETURNING)
+    statuses_dates = [
+        ("active", date.today() - timedelta(days=30), date.today() + timedelta(days=60)),
+        ("active", date.today() - timedelta(days=60), date.today() + timedelta(days=30)),
+        ("completed", date.today() - timedelta(days=180), date.today() - timedelta(days=30)),
+    ]
+    project_rows = [
+        {
+            "org_id": org.id,
+            "name": PROJECT_NAMES[i],
+            "client_name": CLIENTS[i % len(CLIENTS)],
+            "location": LOCATIONS[i % len(LOCATIONS)],
+            "start_date": start,
+            "end_date": end,
+            "status": status,
         }
+        for i, (status, start, end) in enumerate(statuses_dates)
+    ]
+    async with async_session() as session:
+        await _relax_timeout(session)
+        res = await session.execute(insert(Project).returning(Project.id).values(project_rows))
+        project_ids = [row[0] for row in res.all()]
+        await session.commit()
+
+    # 3) Bulk insert workers
+    existing_ruts: set[str] = set()
+    async with async_session() as session:
+        await _relax_timeout(session)
+        rows = (await session.execute(select(Worker.rut).where(Worker.org_id == org.id))).all()
+        existing_ruts = {r[0] for r in rows}
+
+    worker_rows = []
+    for i in range(20):
+        rut = generate_rut(i + 1)
+        if rut in existing_ruts:
+            continue
+        worker_rows.append({
+            "org_id": org.id,
+            "rut": rut,
+            "first_name": rng.choice(FIRST_NAMES),
+            "last_name": rng.choice(LAST_NAMES),
+            "specialty": rng.choice(SPECIALTIES),
+            "phone": f"+569{rng.randint(10000000, 99999999)}",
+            "email": None,
+            "is_active": True,
+        })
+
+    async with async_session() as session:
+        await _relax_timeout(session)
+        worker_ids: list[uuid.UUID] = []
+        # One row at a time to avoid statement timeouts on pooler
+        for row in worker_rows:
+            res = await session.execute(insert(Worker).returning(Worker.id).values([row]))
+            worker_ids.extend(r[0] for r in res.all())
+            await session.commit()
+        if not worker_rows:
+            rows = (await session.execute(select(Worker.id).where(Worker.org_id == org.id))).all()
+            worker_ids = [r[0] for r in rows]
+
+    # 4) Bulk assignments
+    assignments: dict[uuid.UUID, list[uuid.UUID]] = {}
+    assign_rows = []
+    for pid in project_ids:
+        count = rng.randint(10, min(14, len(worker_ids)))
+        team = rng.sample(worker_ids, count)
+        assignments[pid] = team
+        for wid in team:
+            assign_rows.append({"project_id": pid, "worker_id": wid})
+    async with async_session() as session:
+        await _relax_timeout(session)
+        for i in range(0, len(assign_rows), 10):
+            chunk = assign_rows[i:i + 10]
+            await session.execute(insert(ProjectWorker).values(chunk))
+            await session.commit()
+
+    # 5) Bulk evaluations
+    evals_rows = []
+    seen: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    target = 40
+    while len(evals_rows) < target:
+        pid = rng.choice(project_ids)
+        team = assignments[pid]
+        wid = rng.choice(team)
+        key = (pid, wid)
+        if key in seen:
+            continue
+        seen.add(key)
+        scores = [rng.choices([1, 2, 3, 4, 5], weights=[2, 5, 20, 40, 33])[0] for _ in range(5)]
+        avg = compute_average(*scores)
+        if avg >= 4.0:
+            rehire = rng.choices(["yes", "reservations"], weights=[85, 15])[0]
+        elif avg >= 3.0:
+            rehire = rng.choices(["yes", "reservations", "no"], weights=[40, 45, 15])[0]
+        else:
+            rehire = rng.choices(["reservations", "no"], weights=[30, 70])[0]
+        comment = rng.choice(REHIRE_COMMENTS[rehire]) if rng.random() < 0.6 else None
+        reason = comment if rehire != "yes" and comment else None
+        evals_rows.append({
+            "org_id": org.id,
+            "project_id": pid,
+            "worker_id": wid,
+            "score_quality": scores[0],
+            "score_safety": scores[1],
+            "score_punctuality": scores[2],
+            "score_teamwork": scores[3],
+            "score_technical": scores[4],
+            "score_average": avg,
+            "would_rehire": rehire,
+            "rehire_reason": reason,
+            "comment": comment,
+        })
+
+    async with async_session() as session:
+        await _relax_timeout(session)
+        for i in range(0, len(evals_rows), 10):
+            chunk = evals_rows[i:i + 10]
+            await session.execute(insert(Evaluation).values(chunk))
+            await session.commit()
+
+    return {
+        "projects": len(project_ids),
+        "workers": len(worker_rows),
+        "evaluations": len(evals_rows),
+    }
 
 
 async def main() -> None:

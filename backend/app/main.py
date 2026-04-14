@@ -14,6 +14,7 @@ from app.api.v1.projects import router as projects_router
 from app.api.v1.workers import router as workers_router
 from app.api.v1.evaluations import router as evaluations_router
 from app.api.v1.dashboard import router as dashboard_router
+from app.api.v1.admin import router as admin_router
 from app.config import settings
 from app.database import engine
 from app.errors import ErrorCode
@@ -61,6 +62,7 @@ app.include_router(projects_router, prefix="/api/v1")
 app.include_router(workers_router, prefix="/api/v1")
 app.include_router(evaluations_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
 
 # Serve frontend static files (production: built by Dockerfile)
 static_dir = Path(__file__).parent.parent / "static"
