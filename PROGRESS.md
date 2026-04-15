@@ -1,20 +1,155 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-15T15:10:00-04:00
+## Ultima actualizacion: 2026-04-15T17:30:00-04:00
 
 ## Estado actual
-- Fase: Prioridades 2-5 cerradas. **Seed demo data DONE en ambas orgs.**
+- Fase: **Sprint MVP cerrado.** Todas las prioridades 1-4 del plan original terminadas. Proxima fase: pulido UX + decisiones de producto (monetizacion, dominio, launch).
 - Branch activo: master
-- Deploy prod: OK, landing visible en /
+- Ultimo commit: `08e34b6` — perf: reduce dashboard backend queries from 18+ to 4
+- Deploy prod: OK. Landing + app funcionando con data real.
 
-## Sesion 15 abr 2026 — Seed demo data resuelto
-- **Solucion**: `backend/scripts/exec_seed_sql.py` — asyncpg connect con `statement_cache_size=0` + `server_settings={'statement_timeout':'0'}`, ejecuta archivo SQL completo como UN solo `conn.execute(sql)`. Evita overhead per-statement de pgbouncer.
-- Bug del dia anterior (archivos 0 bytes de `gen_seed_sql.py`): era problema de path/modulo, no del script. Corriendo `python -u scripts/gen_seed_sql.py <org_id> > out.sql` funciona limpio (25KB output).
-- Datos seedeados (ambas orgs):
-  - `mi-empresa` (34791eb6-e33e-4c75-bd4f-65b1fcc8f5cb): 3 proyectos, 20 workers, 37 evaluaciones
-  - `mi-empresa-23c437` (162e58e2-2530-4627-a0fa-9a5b5f824f14): 3 proyectos, 20 workers, 37 evaluaciones
-- Archivos temporales `seed1.sql`, `seed1.err`, `seed_mi_empresa*.sql` borrados del working tree.
-- Script reutilizable para futuros seeds: `railway run python -u scripts/exec_seed_sql.py <archivo.sql> [org_id]`
+## Comandos utiles para retomar
+
+```bash
+cd "C:/Users/Usuario/Claude Code German/FaenaScore"
+git log --oneline -10           # ver ultimos commits
+git status                       # estado working tree
+railway status                   # ver deploy
+railway logs                     # logs runtime
+curl -s https://faenascore-production.up.railway.app/api/health | python -m json.tool
+
+# Re-seedear data demo si hace falta:
+cd backend
+python -u scripts/gen_seed_sql.py 34791eb6-e33e-4c75-bd4f-65b1fcc8f5cb > /tmp/seed1.sql
+python -u scripts/gen_seed_sql.py 162e58e2-2530-4627-a0fa-9a5b5f824f14 > /tmp/seed2.sql
+railway run python -u scripts/exec_seed_sql.py /tmp/seed1.sql 34791eb6-e33e-4c75-bd4f-65b1fcc8f5cb
+railway run python -u scripts/exec_seed_sql.py /tmp/seed2.sql 162e58e2-2530-4627-a0fa-9a5b5f824f14
+railway run python -u scripts/check_seed.py   # verificar counts con conexion fresca
+```
+
+## Sesion 15 abr 2026 — Seed, perf, UX audit
+
+### Bloque 1: Seed demo data resuelto (commits 07ffb29, a13d683)
+**Problema pendiente de ayer**: seed no funcionaba via Supabase transaction pooler (timeouts).
+
+**Solucion**: `backend/scripts/exec_seed_sql.py` (nuevo) — asyncpg connect con `statement_cache_size=0` + `server_settings={'statement_timeout':'0'}`, ejecuta archivo SQL completo como UN solo `conn.execute(sql)`. El pooler no parsea statement por statement -> no hay timeouts per-row.
+
+**Bug adicional encontrado en `gen_seed_sql.py`**: loop infinito cuando unique (project_id, worker_id) pairs disponibles < target=40. El while loop spinnea con `rng.choice` retries en duplicados, producia archivo SQL sin `COMMIT;` al final, y asyncpg hacia rollback silencioso al cerrar conexion.
+
+**Fix**: pre-calcular todos los pares asignados, `rng.shuffle`, iterar hasta `min(40, len(all_pairs))`. Rompe cuando target alcanzado o pares agotados, COMMIT siempre se imprime.
+
+**Datos seedeados finales (verificado con conexion fresca `scripts/check_seed.py`):**
+- `mi-empresa` (34791eb6-e33e-4c75-bd4f-65b1fcc8f5cb): 3 proyectos, 20 workers, 37 evaluaciones
+- `mi-empresa-23c437` (162e58e2-2530-4627-a0fa-9a5b5f824f14): 3 proyectos, 20 workers, 37 evaluaciones
+
+**Nuevo archivo util**: `backend/scripts/check_seed.py` — verifica counts por org via asyncpg directo (bypassea SQLAlchemy session cache).
+
+### Bloque 2: Incidente servidor wedged (resuelto con redeploy)
+Al empezar la sesion, `https://faenascore-production.up.railway.app/` no cargaba (timeout 30s). Logs del container mostraban ultimo registro 2026-04-14 20:09:36 — el Uvicorn quedo wedged desde ayer por uno de los intentos fallidos del admin endpoint (loop de INSERTs largo bloqueo el event loop). Fix: `railway up --detach` levanto container nuevo y volvio a responder.
+
+**Leccion**: endpoints HTTP no son buen lugar para batch largos. Si hace falta en el futuro -> Celery task o script standalone, nunca sincrono en request handler.
+
+### Bloque 3: UserButton con logout en AppShell (commit 0d4c929)
+Usuario reporto no ver opcion de logout. Agregado `<UserButton showName afterSignOutUrl="/">` en header de `frontend/src/components/layout/AppShell.tsx`. Muestra avatar + nombre + menu con profile y sign-out.
+
+Usuario tambien pidio ver "creditos restantes". **Decision**: FaenaScore NO tiene sistema de creditos hoy. Pendiente definir modelo de negocio antes de implementar (ver seccion "Pendiente decisiones de producto").
+
+### Bloque 4: Performance del Dashboard (commit 08e34b6)
+Usuario reporto dashboard lento (5-6s). Root cause:
+- `/stats`: 7 queries secuenciales (cada una await la anterior).
+- `/top-workers`: 1 query + N+1 (un query rehire_yes por cada top worker, hasta 11 total).
+- Total: 18+ round-trips al pooler de Supabase en sa-east-1 (~150-200ms c/u) + `statement_cache_size=0` fuerza re-parse cada vez.
+- Ademas: Clerk JWKS verification + lazy-load del chunk Dashboard.
+
+**Fix**: consolidar con `func.count(case(...))` para agregar conteos condicionales en la misma query.
+- `/stats`: 7 -> 4 queries.
+- `/top-workers`: 11 -> 1 query.
+- `backend/app/api/v1/dashboard.py`: imports agregados `case`, removido loop N+1.
+- Tests backend siguen pasando (21 OK).
+
+**Resultado verificado por usuario**: dashboard ahora carga en ~3s (antes 5-6s).
+
+**Palancas futuras si hace falta mas velocidad**:
+1. Prefetch del chunk Dashboard al montar AppShell (~200-400ms).
+2. HTTP cache `stale-while-revalidate` en `/stats` y `/top-workers`.
+3. Pasar DATABASE_URL al session pooler (5432) para eliminar `statement_cache_size=0` overhead (mayor ganancia, requiere verificar IPv4 desde Railway).
+
+### Bloque 5: Auditoria UX con Playwright (pendiente implementar)
+Usuario pidio auditoria UX completa. Navegue landing (desktop 1440 + mobile 375), sign-in, y revise codigo de todas las paginas autenticadas (Dashboard, Workers, ProjectDetail, EvaluateWorker, Evaluate, Projects, WorkerDetail).
+
+**NO se pudo probar flujo autenticado en vivo**: Playwright arranca sin sesion Clerk, no tengo credenciales. El analisis post-login es por lectura de codigo.
+
+**Hallazgos organizados por prioridad** (lista completa abajo en seccion "UX audit — pendiente implementar").
+
+**Top 5 recomendados para atacar primero (segun mi juicio UX)**:
+1. **Clerk production instance + localizar sign-in a espanol**. Hoy hay banner "Development mode" y toda la UI del login en ingles. Mata credibilidad.
+2. **EvaluateWorker debe mostrar nombre del trabajador y proyecto**. Hoy solo dice "Evaluar Trabajador". Riesgo de evaluar al equivocado en terreno.
+3. **Toasts de error en lugar de `catch {}` silencioso** en Dashboard, Workers, Evaluate, ProjectDetail.
+4. **Usar los Skeleton components (ya existen) en vez de "Cargando..." plain text** en Dashboard, Evaluate, ProjectDetail.
+5. **Autosave a localStorage en EvaluateWorker** — supervisor pierde todo si se cae la senal en faena remota.
+
+---
+
+## UX audit — pendiente implementar (priorizado)
+
+### P0 (matan credibilidad / bloquean uso)
+1. **Clerk Development mode** visible en sign-in + UI en ingles. -> Upgrade a production instance, localizar con `localization={esES}`.
+2. **EvaluateWorker.tsx sin nombre/proyecto del trabajador** en header. -> Mostrar nombre completo, RUT, especialidad, proyecto.
+3. **`/sign-up` redirige al landing** — rompe funnel. -> Ruta `<SignUp>` de Clerk explicita + link desde sign-in.
+4. **Errores silenciados con `catch {}`** en Dashboard, Workers, Evaluate, ProjectDetail. -> Toast de error + retry.
+
+### P1 (friccion importante)
+5. **Landing sin screenshots del producto** — solo texto + feature cards genericas con iconos lucide. -> Mockup hero + 2-3 capturas.
+6. **Landing sin pricing** — duda sobre si es gratis para siempre. -> Seccion pricing o "Gratis / Pro proximamente".
+7. **Skeleton.tsx existe pero NO se usa** en Dashboard, Evaluate, ProjectDetail. Muestra "Cargando..." texto plano. -> Reemplazar por Skeleton components.
+8. **Scores sin escala explicita** ("3.9" sin /5). -> Mostrar "3.9 / 5" en KPIs y tooltip en stars.
+9. **"62% recontrataria"** texto poco claro. -> "62% recomendaria recontratar" + tooltip con conteo absoluto.
+10. **Evaluaciones recientes sin fecha/timestamp** en Dashboard. -> Mostrar "hace 2 dias".
+11. **EvaluateWorker con typos**: "Recontratarias" (falta tilde + ¿?), "Evaluacion" (falta tilde). Boton disabled sin explicacion de por que. -> Tildes correctas + tooltip "Completa los 5 puntajes para guardar".
+12. **Sin toast de exito al guardar evaluacion** — redirige silenciosamente. -> Toast "Evaluacion guardada — Sergio Diaz" con undo opcional.
+13. **Workers sin paginacion visible** — hardcoded `size: 50`. -> Paginacion o "mostrando 50 de 127".
+14. **Filtros activos sin chip/limpiar** — usuario olvida que filtro. -> Chips "Soldador ✕" arriba de resultados.
+15. **EvaluateWorker: 5 dimensiones sin tooltip explicativo** — que significa "3 estrellas en Seguridad". -> Tooltip/leyenda "1=Muy malo, 5=Excelente".
+16. **Sin guardar borrador** en EvaluateWorker. Supervisor pierde todo si se cae senal en mineria remota. -> Autosave a localStorage en cada cambio.
+
+### P2 (pulido)
+17. Landing mobile: hero subtitulo se corta raro en 3 lineas.
+18. Footer sin links a terminos/privacidad/contacto.
+19. ProjectDetail sin badge de estado (active/completed/cancelled).
+20. WorkerDetail (347KB con Recharts) chunk grande. Reemplazar por spark SVG.
+21. Evaluate page intermedia innecesaria (proyecto -> project detail -> evaluar).
+22. Empty states sin CTA secundario (ej. "Sin evaluaciones" no linkea a Evaluar).
+23. Sin breadcrumb navigation.
+24. UserButton de Clerk sin localizar a espanol ("Manage account", "Sign out").
+
+---
+
+## Pendiente decisiones de producto (Gustavo/German)
+
+1. **Modelo de monetizacion**: plan Free (limite evaluaciones/mes) vs Pro (ilimitadas). Precio. Creditos vs suscripcion. -> Sin esto no se implementa billing.
+2. **Comprar dominio `faenascore.cl`** en NIC Chile (~$10k CLP/ano) — decision si reemplaza subdominio Railway.
+3. **Landing page**: ¿pedir mockups/capturas del producto a disenador o usar screenshots reales?
+4. **Launch strategy**: ¿demo 1:1 con contratistas conocidos de Gustavo, o landing publica + ads?
+5. **Clerk production upgrade**: requiere configurar dominio propio para evitar el banner dev. ¿Esperamos a tener faenascore.cl o configurar en subdominio Railway?
+
+---
+
+## Archivos nuevos/modificados hoy
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/scripts/exec_seed_sql.py` | NUEVO - ejecuta SQL seed via asyncpg con timeout=0 |
+| `backend/scripts/check_seed.py` | NUEVO - verifica counts con conexion fresca asyncpg |
+| `backend/scripts/gen_seed_sql.py` | FIX - loop infinito cuando pares insuficientes, ahora shuffle+iterate con break |
+| `backend/app/api/v1/dashboard.py` | PERF - consolidacion queries via `func.count(case(...))` |
+| `frontend/src/components/layout/AppShell.tsx` | FEAT - UserButton de Clerk con showName + afterSignOutUrl |
+| `PROGRESS.md` | DOC - esta actualizacion |
+
+## Commits del dia
+- `07ffb29` feat: seed demo data script that bypasses pgbouncer timeouts
+- `a13d683` fix: gen_seed_sql infinite loop when unique (project,worker) pairs < target
+- `0d4c929` feat: add Clerk UserButton with name in AppShell header
+- `08e34b6` perf: reduce dashboard backend queries from 18+ to 4
 
 ## Sesion 14 abr 2026 — Landing + features + quality
 - **Landing page publica** en `/`, dashboard movido a `/app/*`, Clerk sign-in en `/sign-in`
