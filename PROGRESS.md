@@ -1,46 +1,20 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-14T16:20:00-04:00
+## Ultima actualizacion: 2026-04-15T15:10:00-04:00
 
 ## Estado actual
-- Fase: Prioridades 2-5 cerradas. Seed data BLOQUEADO (ver seccion "Pendiente critico")
+- Fase: Prioridades 2-5 cerradas. **Seed demo data DONE en ambas orgs.**
 - Branch activo: master
-- Ultimo commit: 5c54e8d — fix: admin endpoint uses dedicated engine with statement_timeout=0
-- Deploy prod: OK, landing visible en / (requiere hard-refresh)
+- Deploy prod: OK, landing visible en /
 
-## Pendiente critico — retomar en proxima sesion
-
-### Seed demo data en produccion (2 orgs)
-**Objetivo**: 3 proyectos + 20 trabajadores + 40 evaluaciones en cada org:
-- `mi-empresa` (id `34791eb6-e33e-4c75-bd4f-65b1fcc8f5cb`): tiene 3 proyectos + 20 workers + **0 evals** (seed se colgo a mitad)
-- `mi-empresa-23c437` (id `162e58e2-2530-4627-a0fa-9a5b5f824f14`): vacia
-
-**Problema raiz**: Supabase connection string en Railway usa transaction pooler (puerto 6543) que impone statement_timeout ~2s. Con `statement_cache_size=0` (necesario para pgbouncer), cada INSERT se parsea desde cero y excede el timeout. Session pooler (puerto 5432) no accesible desde IPv4 local.
-
-**Intentos fallidos (NO repetir)**:
-1. `railway run python -m scripts.seed_demo` via transaction pool -> timeout en INSERT workers
-2. Bulk inserts en batches de 5, 1 row at a time, SET LOCAL statement_timeout -> pgbouncer no honra SET LOCAL
-3. Cambio a port 5432 (session pool) -> inaccesible IPv4 local
-4. Admin endpoint `POST /api/v1/admin/seed-demo/{org_id}` con engine dedicado `server_settings={'statement_timeout':'0'}` -> requests POST cuelgan server-side, Uvicorn se wedgea (requiere redeploy)
-5. Generar SQL local via `scripts/gen_seed_sql.py` -> scripts Python en bash tool producen archivos 0 bytes (debugging pendiente)
-
-**Siguiente paso recomendado**: Usar Supabase SQL Editor (conexion directa, sin pooler):
-- URL: https://supabase.com/dashboard/project/sudhcjpiixkkwywapvpe/sql/new
-- Generar SQL a mano en la proxima sesion usando `scripts/gen_seed_sql.py` (fix whatever is wrong with it) o escribirlo directo con RUTs/UUIDs hardcoded.
-- Verificar que los IDs de org existen antes de correr.
-
-**Ingredientes listos en repo**:
-- `backend/scripts/seed_demo.py`: logica de seed completa (no usar — timeout issues)
-- `backend/scripts/gen_seed_sql.py`: generador SQL — output bug pendiente
-- `backend/app/api/v1/admin.py`: endpoint admin (no borrar, puede servir con otra estrategia)
-- `backend/scripts/db_unstick.py`: mata backends idle-in-transaction (util si hay locks)
-- `backend/scripts/count_data.py`: cuenta records por org
-- `backend/scripts/list_orgs.py`: lista orgs
-- ADMIN_TOKEN en Railway = `seed-19a683a4690a696f` (para retry del endpoint admin)
-
-### Limpieza pendiente
-- `backend/seed1.sql`, `backend/seed1.err` — artefactos vacios que se commitearon por error, borrar
-- Archivos `scripts/seed_evals_only.py` y `scripts/db_unstick.py` — utiles, dejar
+## Sesion 15 abr 2026 — Seed demo data resuelto
+- **Solucion**: `backend/scripts/exec_seed_sql.py` — asyncpg connect con `statement_cache_size=0` + `server_settings={'statement_timeout':'0'}`, ejecuta archivo SQL completo como UN solo `conn.execute(sql)`. Evita overhead per-statement de pgbouncer.
+- Bug del dia anterior (archivos 0 bytes de `gen_seed_sql.py`): era problema de path/modulo, no del script. Corriendo `python -u scripts/gen_seed_sql.py <org_id> > out.sql` funciona limpio (25KB output).
+- Datos seedeados (ambas orgs):
+  - `mi-empresa` (34791eb6-e33e-4c75-bd4f-65b1fcc8f5cb): 3 proyectos, 20 workers, 37 evaluaciones
+  - `mi-empresa-23c437` (162e58e2-2530-4627-a0fa-9a5b5f824f14): 3 proyectos, 20 workers, 37 evaluaciones
+- Archivos temporales `seed1.sql`, `seed1.err`, `seed_mi_empresa*.sql` borrados del working tree.
+- Script reutilizable para futuros seeds: `railway run python -u scripts/exec_seed_sql.py <archivo.sql> [org_id]`
 
 ## Sesion 14 abr 2026 — Landing + features + quality
 - **Landing page publica** en `/`, dashboard movido a `/app/*`, Clerk sign-in en `/sign-in`
