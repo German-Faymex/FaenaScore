@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -31,18 +31,30 @@ async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
     _member: OrgMember = Depends(get_org_member),
 ):
-    project_count = (await db.execute(select(func.count(Project.id)).where(Project.org_id == org_id))).scalar() or 0
-    active_count = (await db.execute(select(func.count(Project.id)).where(Project.org_id == org_id, Project.status == "active"))).scalar() or 0
-    worker_count = (await db.execute(select(func.count(Worker.id)).where(Worker.org_id == org_id, Worker.is_active == True))).scalar() or 0  # noqa: E712
-    eval_count = (await db.execute(select(func.count(Evaluation.id)).where(Evaluation.org_id == org_id))).scalar() or 0
+    proj_row = (await db.execute(
+        select(
+            func.count(Project.id),
+            func.count(case((Project.status == "active", 1))),
+        ).where(Project.org_id == org_id)
+    )).one()
+    project_count, active_count = proj_row[0] or 0, proj_row[1] or 0
 
-    avg_score = (await db.execute(select(func.avg(Evaluation.score_average)).where(Evaluation.org_id == org_id))).scalar()
-    avg_score = round(avg_score, 2) if avg_score else None
+    worker_count = (await db.execute(
+        select(func.count(Worker.id)).where(Worker.org_id == org_id, Worker.is_active == True)  # noqa: E712
+    )).scalar() or 0
 
-    rehire_yes = (await db.execute(select(func.count(Evaluation.id)).where(Evaluation.org_id == org_id, Evaluation.would_rehire == "yes"))).scalar() or 0
+    eval_row = (await db.execute(
+        select(
+            func.count(Evaluation.id),
+            func.avg(Evaluation.score_average),
+            func.count(case((Evaluation.would_rehire == "yes", 1))),
+        ).where(Evaluation.org_id == org_id)
+    )).one()
+    eval_count = eval_row[0] or 0
+    avg_score = round(eval_row[1], 2) if eval_row[1] else None
+    rehire_yes = eval_row[2] or 0
     rehire_rate = round(rehire_yes / eval_count, 2) if eval_count > 0 else None
 
-    # Specialty distribution
     spec_result = await db.execute(
         select(Worker.specialty, func.count(Worker.id))
         .where(Worker.org_id == org_id, Worker.is_active == True)  # noqa: E712
@@ -70,6 +82,7 @@ async def get_top_workers(
             Worker.id, Worker.first_name, Worker.last_name, Worker.specialty,
             func.avg(Evaluation.score_average).label("avg_score"),
             func.count(Evaluation.id).label("eval_count"),
+            func.count(case((Evaluation.would_rehire == "yes", 1))).label("rehire_yes"),
         )
         .join(Evaluation, Evaluation.worker_id == Worker.id)
         .where(Worker.org_id == org_id, Worker.is_active == True)  # noqa: E712
@@ -78,20 +91,14 @@ async def get_top_workers(
         .order_by(func.avg(Evaluation.score_average).desc())
         .limit(10)
     )
-    rows = result.all()
-
-    items = []
-    for wid, fname, lname, spec, avg_s, ec in rows:
-        rehire_yes = (await db.execute(
-            select(func.count(Evaluation.id)).where(Evaluation.worker_id == wid, Evaluation.would_rehire == "yes")
-        )).scalar() or 0
-        pct = round(rehire_yes / ec * 100, 0) if ec > 0 else 0
-
-        items.append(TopWorkerItem(
+    return [
+        TopWorkerItem(
             id=wid, full_name=f"{fname} {lname}", specialty=spec,
-            avg_score=round(avg_s, 2), evaluation_count=ec, would_rehire_pct=pct,
-        ))
-    return items
+            avg_score=round(avg_s, 2), evaluation_count=ec,
+            would_rehire_pct=round(ry / ec * 100, 0) if ec > 0 else 0,
+        )
+        for wid, fname, lname, spec, avg_s, ec, ry in result.all()
+    ]
 
 
 @router.get("/next-evaluation", response_model=NextEvaluationResponse)
