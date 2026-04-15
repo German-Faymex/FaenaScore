@@ -80,10 +80,13 @@ def main(org_id: str):
         for wid in team:
             print(f"INSERT INTO project_workers (project_id, worker_id) VALUES ('{pid}', '{wid}');")
 
-    seen, count, target = set(), 0, 40
-    while count < target:
-        pid = rng.choice(project_ids)
-        wid = rng.choice(assignments[pid])
+    all_pairs = [(pid, wid) for pid in project_ids for wid in assignments[pid]]
+    rng.shuffle(all_pairs)
+    target = min(40, len(all_pairs))
+    seen, count = set(), 0
+    for pid, wid in all_pairs:
+        if count >= target:
+            break
         if (pid, wid) in seen:
             continue
         seen.add((pid, wid))
