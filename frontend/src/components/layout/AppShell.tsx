@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { LayoutDashboard, FolderKanban, Users, ClipboardCheck, Menu, X } from 'lucide-react'
+import { UserButton } from '@clerk/clerk-react'
 
 const navItems = [
   { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
@@ -54,6 +55,11 @@ export default function AppShell() {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1" />
+          <UserButton
+            afterSignOutUrl="/"
+            showName
+            appearance={{ elements: { userButtonBox: 'flex-row-reverse gap-2', userButtonOuterIdentifier: 'text-sm text-gray-700' } }}
+          />
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <Outlet />
