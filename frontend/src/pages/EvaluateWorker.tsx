@@ -1,10 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Save, ArrowLeft } from 'lucide-react'
+import { Save, ArrowLeft, Check } from 'lucide-react'
 import StarRating from '../components/ui/StarRating'
 import { api } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { SCORE_LABELS, REHIRE_OPTIONS } from '../lib/constants'
+import { formatRelative } from '../lib/dates'
+
+const draftKey = (projectId: string, workerId: string) => `faenascore:draft:${projectId}:${workerId}`
+
+interface Draft {
+  scores: number[]
+  wouldRehire: string
+  rehireReason: string
+  comment: string
+  ts: number
+}
 
 interface ContextHeader {
   worker_name: string
@@ -26,6 +37,42 @@ export default function EvaluateWorker() {
   const [comment, setComment] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null)
+  const draftRestoredRef = useRef(false)
+
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    if (!projectId || !workerId) return
+    const raw = localStorage.getItem(draftKey(projectId, workerId))
+    if (!raw) { draftRestoredRef.current = true; return }
+    try {
+      const d = JSON.parse(raw) as Partial<Draft>
+      if (Array.isArray(d.scores) && d.scores.length === 5) setScores(d.scores.map((n) => Number(n) || 0))
+      if (typeof d.wouldRehire === 'string') setWouldRehire(d.wouldRehire)
+      if (typeof d.rehireReason === 'string') setRehireReason(d.rehireReason)
+      if (typeof d.comment === 'string') setComment(d.comment)
+      if (typeof d.ts === 'number') setDraftSavedAt(d.ts)
+    } catch { /* corrupt draft -> ignore */ }
+    draftRestoredRef.current = true
+  }, [projectId, workerId])
+
+  // Persist draft on every change (after initial restore)
+  useEffect(() => {
+    if (!projectId || !workerId || !draftRestoredRef.current) return
+    const hasContent = scores.some((s) => s > 0) || wouldRehire !== '' || rehireReason !== '' || comment !== ''
+    const key = draftKey(projectId, workerId)
+    if (!hasContent) {
+      localStorage.removeItem(key)
+      setDraftSavedAt(null)
+      return
+    }
+    const ts = Date.now()
+    const payload: Draft = { scores, wouldRehire, rehireReason, comment, ts }
+    try {
+      localStorage.setItem(key, JSON.stringify(payload))
+      setDraftSavedAt(ts)
+    } catch { /* localStorage full or disabled -> silently skip */ }
+  }, [scores, wouldRehire, rehireReason, comment, projectId, workerId])
 
   useEffect(() => {
     if (!ORG_ID || !projectId || !workerId) return
@@ -48,10 +95,22 @@ export default function EvaluateWorker() {
     return () => { cancelled = true }
   }, [ORG_ID, projectId, workerId])
 
-  const allScoresSet = scores.every((s) => s > 0)
+  const missingScores = scores.filter((s) => s === 0).length
+  const allScoresSet = missingScores === 0
   const needsReason = wouldRehire === 'reservations' || wouldRehire === 'no'
   const reasonOk = !needsReason || rehireReason.trim().length >= 3
   const canSubmit = allScoresSet && wouldRehire !== '' && reasonOk
+
+  let missingLabel = ''
+  if (!allScoresSet) {
+    missingLabel = missingScores === 5
+      ? 'Completa los 5 puntajes'
+      : `Falta ${missingScores === 1 ? '1 puntaje' : `${missingScores} puntajes`}`
+  } else if (wouldRehire === '') {
+    missingLabel = 'Indica si recontratarías'
+  } else if (!reasonOk) {
+    missingLabel = 'Escribe el motivo (mínimo 3 caracteres)'
+  }
 
   async function handleSubmit() {
     if (!canSubmit || !projectId || !workerId) return
@@ -71,6 +130,7 @@ export default function EvaluateWorker() {
         rehire_reason: rehireReason || undefined,
         comment: comment || undefined,
       })
+      localStorage.removeItem(draftKey(projectId, workerId))
       navigate(`/app/projects/${projectId}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al guardar')
@@ -171,14 +231,26 @@ export default function EvaluateWorker() {
       {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>}
 
       {/* Submit */}
-      <button
-        onClick={handleSubmit}
-        disabled={!canSubmit || saving}
-        className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 rounded-xl text-base font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-      >
-        <Save className="w-5 h-5" />
-        {saving ? 'Guardando...' : 'Guardar Evaluación'}
-      </button>
+      <div className="space-y-2">
+        <button
+          onClick={handleSubmit}
+          disabled={!canSubmit || saving}
+          title={canSubmit ? undefined : missingLabel}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 rounded-xl text-base font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Guardando...' : 'Guardar Evaluación'}
+        </button>
+        {!canSubmit && !saving && missingLabel && (
+          <p className="text-xs text-center text-gray-500">{missingLabel}</p>
+        )}
+        {canSubmit && !saving && draftSavedAt && (
+          <p className="flex items-center justify-center gap-1 text-xs text-gray-400">
+            <Check className="w-3 h-3" />
+            Borrador guardado {formatRelative(new Date(draftSavedAt).toISOString())}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
