@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Filter, UserPlus, Users, Upload, Download } from 'lucide-react'
+import { Search, Filter, UserPlus, Users, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api, type Worker } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { useDebounce } from '../hooks/useDebounce'
@@ -10,6 +10,8 @@ import Modal from '../components/ui/Modal'
 import { RowSkeleton } from '../components/ui/Skeleton'
 import NewWorkerForm from '../components/forms/NewWorkerForm'
 import ImportWorkersForm from '../components/forms/ImportWorkersForm'
+
+const PAGE_SIZE = 20
 
 export default function Workers() {
   const { orgId: ORG_ID } = useOrg()
@@ -21,7 +23,15 @@ export default function Workers() {
   const [showFilters, setShowFilters] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
   const debouncedSearch = useDebounce(search)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, specialty, minScore])
 
   const load = useCallback(async () => {
     if (!ORG_ID) return
@@ -32,14 +42,20 @@ export default function Workers() {
         specialty: specialty || undefined,
         min_score: minScore ? parseFloat(minScore) : undefined,
         sort_by: 'last_name',
-        size: 50,
+        page,
+        size: PAGE_SIZE,
       })
       setWorkers(res.items)
+      setTotal(res.total)
+      setTotalPages(res.pages)
     } catch { /* expected without DB */ }
     finally { setLoading(false) }
-  }, [ORG_ID, debouncedSearch, specialty, minScore])
+  }, [ORG_ID, debouncedSearch, specialty, minScore, page])
 
   useEffect(() => { load() }, [load])
+
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(page * PAGE_SIZE, total)
 
   return (
     <div className="space-y-4">
@@ -133,36 +149,68 @@ export default function Workers() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">RUT</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Especialidad</th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">Score</th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Evaluaciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {workers.map((w) => (
-                  <tr key={w.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Link to={`/app/workers/${w.id}`} className="font-medium text-gray-900 hover:text-blue-600">
-                        {w.first_name} {w.last_name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{w.rut}</td>
-                    <td className="px-4 py-3 text-gray-600">{w.specialty}</td>
-                    <td className="px-4 py-3 text-center"><ScoreBadge score={w.avg_score} size="sm" /></td>
-                    <td className="px-4 py-3 text-center text-gray-500 hidden sm:table-cell">{w.evaluation_count}</td>
+        <>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">RUT</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Especialidad</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-600">Score</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Evaluaciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {workers.map((w) => (
+                    <tr key={w.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <Link to={`/app/workers/${w.id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                          {w.first_name} {w.last_name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{w.rut}</td>
+                      <td className="px-4 py-3 text-gray-600">{w.specialty}</td>
+                      <td className="px-4 py-3 text-center"><ScoreBadge score={w.avg_score} size="sm" /></td>
+                      <td className="px-4 py-3 text-center text-gray-500 hidden sm:table-cell">{w.evaluation_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm text-gray-600">
+                Mostrando <span className="font-medium text-gray-900">{rangeStart}</span>
+                {rangeEnd > rangeStart && <>–<span className="font-medium text-gray-900">{rangeEnd}</span></>} de{' '}
+                <span className="font-medium text-gray-900">{total}</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Anterior
+                </button>
+                <span className="text-sm text-gray-600 px-2">
+                  Página <span className="font-medium text-gray-900">{page}</span> de{' '}
+                  <span className="font-medium text-gray-900">{totalPages}</span>
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+                >
+                  Siguiente <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {ORG_ID && (
