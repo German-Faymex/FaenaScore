@@ -37,38 +37,38 @@ from app.services.rut_validator import format_rut
 from app.services.score_calculator import compute_average
 
 FIRST_NAMES = [
-    "Jose", "Juan", "Luis", "Carlos", "Pedro", "Miguel", "Jorge", "Manuel",
-    "Francisco", "Ricardo", "Hector", "Raul", "Sergio", "Diego", "Rodrigo",
-    "Cristian", "Felipe", "Matias", "Sebastian", "Claudio",
+    "José", "Juan", "Luis", "Carlos", "Pedro", "Miguel", "Jorge", "Manuel",
+    "Francisco", "Ricardo", "Héctor", "Raúl", "Sergio", "Diego", "Rodrigo",
+    "Cristián", "Felipe", "Matías", "Sebastián", "Claudio",
 ]
 LAST_NAMES = [
-    "Gonzalez", "Munoz", "Rojas", "Diaz", "Perez", "Silva", "Soto", "Contreras",
-    "Lopez", "Morales", "Araya", "Fuentes", "Valenzuela", "Reyes", "Vargas",
-    "Castillo", "Espinoza", "Sepulveda", "Torres", "Aguilar", "Alarcon",
+    "González", "Muñoz", "Rojas", "Díaz", "Pérez", "Silva", "Soto", "Contreras",
+    "López", "Morales", "Araya", "Fuentes", "Valenzuela", "Reyes", "Vargas",
+    "Castillo", "Espinoza", "Sepúlveda", "Torres", "Aguilar", "Alarcón",
     "Herrera", "Pizarro", "Navarro", "Carrasco",
 ]
 SPECIALTIES = [
-    "Soldador", "Mecanico", "Electrico", "Instrumentista", "Canierista",
-    "Calderero", "Operador Grua", "Rigger", "Pintor Industrial", "Andamiero",
+    "Soldador", "Mecánico", "Eléctrico", "Instrumentista", "Cañerista",
+    "Calderero", "Operador Grúa", "Rigger", "Pintor Industrial", "Andamiero",
     "Supervisor", "Prevencionista",
 ]
 CLIENTS = [
     "Codelco Andina", "Anglo American Los Bronces", "Minera Escondida",
-    "Colbun S.A.", "Enel Generacion", "Collahuasi",
+    "Colbún S.A.", "Enel Generación", "Collahuasi",
 ]
 LOCATIONS = [
-    "Los Andes, Region de Valparaiso", "Calama, Region de Antofagasta",
-    "Copiapo, Region de Atacama", "Rancagua, Region de O'Higgins",
-    "Iquique, Region de Tarapaca", "Puchuncavi, Region de Valparaiso",
+    "Los Andes, Región de Valparaíso", "Calama, Región de Antofagasta",
+    "Copiapó, Región de Atacama", "Rancagua, Región de O'Higgins",
+    "Iquique, Región de Tarapacá", "Puchuncaví, Región de Valparaíso",
 ]
 PROJECT_NAMES = [
-    "Mantencion Mayor Concentradora", "Ampliacion Planta SX-EW",
-    "Shutdown Molino SAG Q1", "Instalacion Nueva Correa Overland",
-    "Detencion Programada Chancador Primario", "Overhaul Horno Flash",
+    "Mantención Mayor Concentradora", "Ampliación Planta SX-EW",
+    "Shutdown Molino SAG Q1", "Instalación Nueva Correa Overland",
+    "Detención Programada Chancador Primario", "Overhaul Horno Flash",
 ]
 REHIRE_COMMENTS = {
     "yes": [
-        "Excelente desempeno, muy profesional.", "Buen trabajo, cumple plazos.",
+        "Excelente desempeño, muy profesional.", "Buen trabajo, cumple plazos.",
         "Recomendado 100%, muy responsable.", "Trabajo impecable, sin observaciones.",
     ],
     "reservations": [

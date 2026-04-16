@@ -5,16 +5,16 @@ import sys
 import uuid
 from datetime import date, timedelta
 
-FIRST_NAMES = ["Jose", "Juan", "Luis", "Carlos", "Pedro", "Miguel", "Jorge", "Manuel", "Francisco", "Ricardo", "Hector", "Raul", "Sergio", "Diego", "Rodrigo", "Cristian", "Felipe", "Matias", "Sebastian", "Claudio"]
-LAST_NAMES = ["Gonzalez", "Munoz", "Rojas", "Diaz", "Perez", "Silva", "Soto", "Contreras", "Lopez", "Morales", "Araya", "Fuentes", "Valenzuela", "Reyes", "Vargas", "Castillo", "Espinoza", "Sepulveda", "Torres", "Aguilar"]
-SPECIALTIES = ["Soldador", "Mecanico", "Electrico", "Instrumentista", "Canierista", "Calderero", "Operador Grua", "Rigger", "Pintor Industrial", "Andamiero", "Supervisor", "Prevencionista"]
+FIRST_NAMES = ["José", "Juan", "Luis", "Carlos", "Pedro", "Miguel", "Jorge", "Manuel", "Francisco", "Ricardo", "Héctor", "Raúl", "Sergio", "Diego", "Rodrigo", "Cristián", "Felipe", "Matías", "Sebastián", "Claudio"]
+LAST_NAMES = ["González", "Muñoz", "Rojas", "Díaz", "Pérez", "Silva", "Soto", "Contreras", "López", "Morales", "Araya", "Fuentes", "Valenzuela", "Reyes", "Vargas", "Castillo", "Espinoza", "Sepúlveda", "Torres", "Aguilar"]
+SPECIALTIES = ["Soldador", "Mecánico", "Eléctrico", "Instrumentista", "Cañerista", "Calderero", "Operador Grúa", "Rigger", "Pintor Industrial", "Andamiero", "Supervisor", "Prevencionista"]
 CLIENTS = ["Codelco Andina", "Anglo American Los Bronces", "Minera Escondida"]
-LOCATIONS = ["Los Andes, Region de Valparaiso", "Calama, Region de Antofagasta", "Copiapo, Region de Atacama"]
-PROJECT_NAMES = ["Mantencion Mayor Concentradora", "Ampliacion Planta SX-EW", "Shutdown Molino SAG Q1"]
+LOCATIONS = ["Los Andes, Región de Valparaíso", "Calama, Región de Antofagasta", "Copiapó, Región de Atacama"]
+PROJECT_NAMES = ["Mantención Mayor Concentradora", "Ampliación Planta SX-EW", "Shutdown Molino SAG Q1"]
 REHIRE_COMMENTS = {
-    "yes": ["Excelente desempeno.", "Buen trabajo, cumple plazos.", "Recomendado 100%."],
-    "reservations": ["Cumple pero necesita mas supervision.", "Llega atrasado a veces."],
-    "no": ["No cumplio estandares de seguridad.", "Mala actitud."],
+    "yes": ["Excelente desempeño.", "Buen trabajo, cumple plazos.", "Recomendado 100%."],
+    "reservations": ["Cumple pero necesita más supervisión.", "Llega atrasado a veces."],
+    "no": ["No cumplió estándares de seguridad.", "Mala actitud."],
 }
 
 
