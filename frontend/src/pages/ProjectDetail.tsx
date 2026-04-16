@@ -32,7 +32,34 @@ export default function ProjectDetail() {
 
   useEffect(() => { load() }, [load])
 
-  if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
+  if (loading) return (
+    <div className="space-y-6" aria-busy="true" aria-label="Cargando proyecto">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="flex-1 space-y-2">
+          <div className="h-7 w-64 bg-gray-200 rounded animate-pulse" />
+          <div className="h-3 w-48 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+          <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+        </div>
+        <div className="divide-y divide-gray-100">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3">
+              <div className="space-y-2 flex-1">
+                <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+              </div>
+              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
   if (!project) return <div className="text-gray-500">Proyecto no encontrado</div>
 
   const unevaluated = workers.filter((w) => !w.evaluated)

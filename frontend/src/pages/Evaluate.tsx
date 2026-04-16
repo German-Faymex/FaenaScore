@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ClipboardCheck } from 'lucide-react'
 import { api, type Project } from '../lib/api'
 import { useOrg } from '../lib/org'
+import { CardSkeleton } from '../components/ui/Skeleton'
 
 export default function Evaluate() {
   const { orgId: ORG_ID } = useOrg()
@@ -17,7 +18,13 @@ export default function Evaluate() {
       .finally(() => setLoading(false))
   }, [ORG_ID])
 
-  if (loading) return <div className="animate-pulse text-gray-400">Cargando...</div>
+  if (loading) return (
+    <div className="space-y-4" aria-busy="true" aria-label="Cargando proyectos">
+      <div className="h-7 w-48 bg-gray-200 rounded animate-pulse" />
+      <div className="h-4 w-80 bg-gray-200 rounded animate-pulse" />
+      <CardSkeleton count={3} />
+    </div>
+  )
 
   return (
     <div className="space-y-4">
