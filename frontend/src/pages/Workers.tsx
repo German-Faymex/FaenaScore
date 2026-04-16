@@ -101,7 +101,7 @@ export default function Workers() {
             </select>
             <input
               type="number"
-              placeholder="Score minimo"
+              placeholder="Score mínimo"
               value={minScore}
               onChange={(e) => setMinScore(e.target.value)}
               min="1" max="5" step="0.5"
@@ -142,7 +142,7 @@ export default function Workers() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">RUT</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Especialidad</th>
                   <th className="text-center px-4 py-3 font-medium text-gray-600">Score</th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Evals</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Evaluaciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

@@ -170,6 +170,7 @@ export interface TopWorker {
 
 export interface RecentEvaluation {
   id: string
+  worker_id: string
   worker_name: string
   project_name: string
   score_average: number

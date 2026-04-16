@@ -30,6 +30,7 @@ class TopWorkerItem(BaseModel):
 
 class RecentEvaluationItem(BaseModel):
     id: uuid.UUID
+    worker_id: uuid.UUID
     worker_name: str
     project_name: str
     score_average: float

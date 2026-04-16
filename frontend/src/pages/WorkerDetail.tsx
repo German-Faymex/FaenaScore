@@ -38,7 +38,7 @@ export default function WorkerDetail() {
           <h1 className="text-2xl font-bold text-gray-900">{worker.first_name} {worker.last_name}</h1>
           <p className="text-sm text-gray-500">{worker.specialty} · {worker.rut}</p>
         </div>
-        <ScoreBadge score={worker.avg_score} />
+        <ScoreBadge score={worker.avg_score} showScale />
         <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="Editar">
           <Pencil className="w-4 h-4" />
         </button>
@@ -68,11 +68,14 @@ export default function WorkerDetail() {
               { label: 'Seguridad', value: avg_scores.safety },
               { label: 'Puntualidad', value: avg_scores.punctuality },
               { label: 'Trabajo en Equipo', value: avg_scores.teamwork },
-              { label: 'Habilidad Tecnica', value: avg_scores.technical },
+              { label: 'Habilidad Técnica', value: avg_scores.technical },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">{label}</span>
-                <StarRating value={Math.round(value)} readonly size="sm" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 tabular-nums">{value.toFixed(1)} / 5</span>
+                  <StarRating value={Math.round(value)} readonly size="sm" />
+                </div>
               </div>
             ))}
           </div>
@@ -98,11 +101,11 @@ export default function WorkerDetail() {
       {/* Rehire stats */}
       {totalRehire > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">Recontratacion</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">Recontratación</h2>
           <div className="flex gap-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">{rehire_stats.yes}</p>
-              <p className="text-xs text-gray-500">Si</p>
+              <p className="text-xs text-gray-500">Sí</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-yellow-600">{rehire_stats.reservations}</p>

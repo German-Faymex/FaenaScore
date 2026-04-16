@@ -4,6 +4,7 @@ import { Users, FolderKanban, ClipboardCheck, TrendingUp } from 'lucide-react'
 import { api, type DashboardStats, type TopWorker, type RecentEvaluation, type NextEvaluation } from '../lib/api'
 import { useOrg } from '../lib/org'
 import ScoreBadge from '../components/ui/ScoreBadge'
+import { formatRelative } from '../lib/dates'
 
 export default function Dashboard() {
   const { orgId: ORG_ID } = useOrg()
@@ -62,7 +63,7 @@ export default function Dashboard() {
         <KPICard icon={<FolderKanban className="w-5 h-5 text-blue-600" />} label="Proyectos" value={stats?.project_count ?? 0} sub={`${stats?.active_project_count ?? 0} activos`} />
         <KPICard icon={<Users className="w-5 h-5 text-emerald-600" />} label="Trabajadores" value={stats?.worker_count ?? 0} />
         <KPICard icon={<ClipboardCheck className="w-5 h-5 text-violet-600" />} label="Evaluaciones" value={stats?.evaluation_count ?? 0} />
-        <KPICard icon={<TrendingUp className="w-5 h-5 text-amber-600" />} label="Score Promedio" value={stats?.avg_score_overall?.toFixed(1) ?? '—'} sub={stats?.rehire_rate ? `${(stats.rehire_rate * 100).toFixed(0)}% recontrataria` : undefined} />
+        <KPICard icon={<TrendingUp className="w-5 h-5 text-amber-600" />} label="Score Promedio" value={stats?.avg_score_overall != null ? `${stats.avg_score_overall.toFixed(1)} / 5` : '—'} sub={stats?.rehire_rate != null ? `${(stats.rehire_rate * 100).toFixed(0)}% recomienda recontratar` : undefined} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -70,14 +71,14 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Top Trabajadores</h2>
           {topWorkers.length === 0 ? (
-            <p className="text-gray-400 text-sm">Sin evaluaciones aun</p>
+            <p className="text-gray-400 text-sm">Sin evaluaciones aún</p>
           ) : (
             <div className="space-y-2">
               {topWorkers.map((w) => (
                 <Link key={w.id} to={`/app/workers/${w.id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{w.full_name}</p>
-                    <p className="text-xs text-gray-500">{w.specialty} · {w.evaluation_count} evals</p>
+                    <p className="text-xs text-gray-500">{w.specialty} · {w.evaluation_count === 1 ? '1 evaluación' : `${w.evaluation_count} evaluaciones`}</p>
                   </div>
                   <ScoreBadge score={w.avg_score} />
                 </Link>
@@ -90,22 +91,25 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Evaluaciones Recientes</h2>
           {recent.length === 0 ? (
-            <p className="text-gray-400 text-sm">Sin evaluaciones aun</p>
+            <p className="text-gray-400 text-sm">Sin evaluaciones aún</p>
           ) : (
             <div className="space-y-2">
               {recent.map((e) => (
-                <div key={e.id} className="flex items-center justify-between p-2 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{e.worker_name}</p>
-                    <p className="text-xs text-gray-500">{e.project_name}</p>
+                <Link key={e.id} to={`/app/workers/${e.worker_id}`} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{e.worker_name}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {e.project_name}
+                      <span className="text-gray-400"> · {formatRelative(e.created_at)}</span>
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <ScoreBadge score={e.score_average} size="sm" />
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${e.would_rehire === 'yes' ? 'bg-green-100 text-green-700' : e.would_rehire === 'no' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {e.would_rehire === 'yes' ? 'Si' : e.would_rehire === 'no' ? 'No' : 'Reservas'}
+                      {e.would_rehire === 'yes' ? 'Sí' : e.would_rehire === 'no' ? 'No' : 'Reservas'}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

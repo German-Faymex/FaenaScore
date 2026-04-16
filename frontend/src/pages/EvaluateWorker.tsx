@@ -120,7 +120,7 @@ export default function EvaluateWorker() {
 
       {/* Rehire */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        <p className="text-sm font-medium text-gray-700">Recontratarias a este trabajador?</p>
+        <p className="text-sm font-medium text-gray-700">¿Recontratarías a este trabajador?</p>
         <div className="grid grid-cols-3 gap-2">
           {REHIRE_OPTIONS.map((opt) => (
             <button
@@ -177,7 +177,7 @@ export default function EvaluateWorker() {
         className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 rounded-xl text-base font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
       >
         <Save className="w-5 h-5" />
-        {saving ? 'Guardando...' : 'Guardar Evaluacion'}
+        {saving ? 'Guardando...' : 'Guardar Evaluación'}
       </button>
     </div>
   )

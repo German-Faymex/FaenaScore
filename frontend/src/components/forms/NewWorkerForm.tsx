@@ -26,7 +26,7 @@ export default function NewWorkerForm({ orgId, initial, onCreated, onCancel }: P
     e.preventDefault()
     setError(null)
     if (!isEdit && !validateRut(rut)) {
-      setError('RUT invalido')
+      setError('RUT inválido')
       return
     }
     if (!firstName.trim() || !lastName.trim()) {
@@ -79,7 +79,7 @@ export default function NewWorkerForm({ orgId, initial, onCreated, onCancel }: P
           placeholder="12.345.678-9"
           autoFocus={!isEdit}
         />
-        {!rutValid && <p className="text-xs text-red-600 mt-1">RUT invalido</p>}
+        {!rutValid && <p className="text-xs text-red-600 mt-1">RUT inválido</p>}
         {isEdit && <p className="text-xs text-gray-500 mt-1">El RUT no se puede modificar</p>}
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -100,7 +100,7 @@ export default function NewWorkerForm({ orgId, initial, onCreated, onCancel }: P
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
           <input type="tel" value={phone ?? ''} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+56 9 1234 5678" />
         </div>
         <div>

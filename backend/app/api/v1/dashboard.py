@@ -177,7 +177,7 @@ async def get_recent_evaluations(
     _member: OrgMember = Depends(get_org_member),
 ):
     result = await db.execute(
-        select(Evaluation, Worker.first_name, Worker.last_name, Project.name)
+        select(Evaluation, Worker.id, Worker.first_name, Worker.last_name, Project.name)
         .join(Worker, Evaluation.worker_id == Worker.id)
         .join(Project, Evaluation.project_id == Project.id)
         .where(Evaluation.org_id == org_id)
@@ -188,8 +188,8 @@ async def get_recent_evaluations(
 
     return [
         RecentEvaluationItem(
-            id=ev.id, worker_name=f"{fname} {lname}", project_name=pname,
+            id=ev.id, worker_id=wid, worker_name=f"{fname} {lname}", project_name=pname,
             score_average=ev.score_average, would_rehire=ev.would_rehire, created_at=ev.created_at,
         )
-        for ev, fname, lname, pname in rows
+        for ev, wid, fname, lname, pname in rows
     ]

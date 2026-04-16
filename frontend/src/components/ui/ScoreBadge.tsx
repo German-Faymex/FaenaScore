@@ -1,6 +1,7 @@
 interface ScoreBadgeProps {
   score: number | null
   size?: 'sm' | 'md'
+  showScale?: boolean
 }
 
 function getColorClass(score: number): string {
@@ -10,14 +11,20 @@ function getColorClass(score: number): string {
   return 'bg-green-100 text-green-800'
 }
 
-export default function ScoreBadge({ score, size = 'md' }: ScoreBadgeProps) {
-  if (score === null) return <span className="text-gray-400 text-sm">—</span>
+export default function ScoreBadge({ score, size = 'md', showScale }: ScoreBadgeProps) {
+  if (score === null) return <span className="text-gray-400 text-sm" title="Sin evaluaciones">—</span>
 
   const sizeClass = size === 'sm' ? 'text-xs px-1.5 py-0.5' : 'text-sm px-2 py-0.5'
+  // Show '/5' inline on md size by default; sm stays compact but exposes the scale via title.
+  const withScale = showScale ?? size === 'md'
+  const label = withScale ? `${score.toFixed(1)} / 5` : score.toFixed(1)
 
   return (
-    <span className={`inline-flex items-center font-semibold rounded-full ${sizeClass} ${getColorClass(score)}`}>
-      {score.toFixed(1)}
+    <span
+      className={`inline-flex items-center font-semibold rounded-full ${sizeClass} ${getColorClass(score)}`}
+      title={`${score.toFixed(1)} / 5`}
+    >
+      {label}
     </span>
   )
 }

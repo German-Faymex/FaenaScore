@@ -61,14 +61,14 @@ export default function NewProjectForm({ orgId, initial, onCreated, onCancel }: 
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Mantencion Molino SAG" autoFocus />
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Mantención Molino SAG" autoFocus />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <input type="text" value={clientName ?? ''} onChange={(e) => setClientName(e.target.value)} className={inputCls} placeholder="Minera Escondida" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Ubicacion</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
         <input type="text" value={location ?? ''} onChange={(e) => setLocation(e.target.value)} className={inputCls} placeholder="Antofagasta" />
       </div>
       <div className="grid grid-cols-2 gap-3">
