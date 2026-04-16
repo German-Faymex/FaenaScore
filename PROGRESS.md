@@ -1,12 +1,57 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-16T13:30:00-04:00
+## Ultima actualizacion: 2026-04-16T17:15:00-04:00
 
 ## Estado actual
-- Fase: **Pulido UX post-MVP.** Audit completo via Playwright, 9 fixes en prod de 28 hallazgos. Quedan 2 UX (#12 paginacion, #14 skeletons) + P2 + #2 Clerk prod (bloqueado por dominio).
+- Fase: **Pulido UX post-MVP.** 11 fixes en prod de 28 hallazgos. Cerradas #12 (paginacion) y #14 (skeletons), **ambas verificadas visualmente en prod**. Queda #2 Clerk prod (bloqueado por dominio) + P2.
 - Branch activo: master
-- Ultimo commit: `8fa8bbd` — ux: autosave draft + disabled reason hint in EvaluateWorker
-- Deploy prod: OK. App con datos acentuados, scores /5, fechas relativas, worker ctx en Evaluate, autosave.
+- Ultimo commit: `207b568` — ux: skeleton loaders in Dashboard / Evaluate / ProjectDetail
+- Commit anterior: `1364141` — feat: paginate Workers page (size 20 + prev/next UI)
+- Deploy prod: bundle Railway `index-09AiEa6i.js` confirma codigo en prod. Playwright verifico Dashboard skeleton con `aria-label="Cargando dashboard"`, Workers con 20 filas paginadas (barra oculta porque total=20=1 pagina, comportamiento esperado), Evaluate + ProjectDetail cargan sin "Cargando..." plain.
+
+## Sesion 16 abr 2026 (tarde) — #12 paginacion + #14 skeletons
+
+### Contexto
+Retomamos post-audit UX de la manana. Arrancamos cerrando los 2 items UX que quedaban de la lista priorizada.
+
+### Bloqueo con el classifier
+Al arrancar, el auto-mode classifier de Anthropic (`claude-opus-4-6[1m]`) quedo intermitentemente caido durante ~1 hora. Bloqueaba todo `npm`/`python`/`railway`/`cd` con espacios en path. Workaround: usuario corrio comandos con prefijo `!` desde el prompt (build + commit + push + railway up de #12 todos via `!`). Luego desactivamos auto mode con Shift+Tab, lo que hace que Bash use la allowlist de `permissions.allow` en vez del classifier — comandos ahora pasan pidiendo confirmacion puntual.
+
+### Commit `1364141` — #12 Paginacion Workers
+- `frontend/src/pages/Workers.tsx`: `PAGE_SIZE=20` (antes hardcoded 50), estado `page/total/totalPages`, auto-reset de page cuando cambian filtros (search/specialty/minScore)
+- UI de paginacion: "Mostrando X–Y de Z" + botones Anterior/Siguiente con disabled states + "Página N de M"
+- Barra solo aparece si `totalPages > 1`
+- Backend ya soportaba `page`/`size` y devolvia `total`/`pages` — cero cambios en workers.py
+- Bundle hash: `kmh2W6H6`
+- Verificado: build pasa (749ms), deploy OK (`curl /api/health` → `{"status":"ok","database":"connected"}`)
+
+### Commit `207b568` — #14 Skeletons
+- Reemplazo de `<div className="animate-pulse text-gray-400">Cargando...</div>` por skeletons shape-aware en:
+  - `Dashboard.tsx`: nuevo componente `DashboardSkeleton()` inline. 4 KPI cards + 2 panels con rows. `aria-busy="true"`
+  - `Evaluate.tsx`: h1 + descripcion + `CardSkeleton count={3}` del primitivo existente
+  - `ProjectDetail.tsx`: header con back-arrow + titulo, workers table con 5 filas skeleton. `aria-busy="true"`
+- `App.tsx PageFallback` + `WorkerDetail` + `AssignWorkersForm` aun usan "Cargando..." plain (scope de la tarea era Dashboard/Evaluate/ProjectDetail por lista UX audit)
+- Bundle hash: `cVo6nHCx`
+- Verificado: build pasa (545ms)
+
+### Creacion de CLAUDE.md global
+- Nuevo archivo en `C:/Users/Usuario/Proyectos Claude Code/CLAUDE.md` con las 6 reglas de autonomia adaptadas del CLAUDE.md de Fillanyform
+- Aplica a todos los subproyectos de esa carpeta (Brochure, Investigador Faena, Fillanyform, etc.)
+- **Nota**: FaenaScore esta en `C:/Users/Usuario/Claude Code German/FaenaScore`, OTRA carpeta — no hereda ese CLAUDE.md. Si queremos que FaenaScore tambien siga esas reglas, habria que crear un CLAUDE.md en `Claude Code German/` o linkear
+
+### Verificacion Playwright en prod (cerrada)
+- Login con profile persistido `mcp-chrome-7006d60` de sesion anterior
+- **Dashboard** (`/app`): snapshot capturo `generic "Cargando dashboard" [ref=e110]` → skeleton con `aria-busy="true"` renderiza durante load. Tras cargar: 3 proyectos, 20 trabajadores, 37 evals, score 3.9/5, 62% recontratar. Top Trabajadores + Evals Recientes OK.
+- **Workers** (`/app/workers`): 20 filas, sin barra de paginacion visible (total=20=1 pagina, logica `totalPages > 1` oculta correctamente).
+- **Evaluate** (`/app/evaluate`): 2 proyectos activos listados sin "Cargando..." plain.
+- **ProjectDetail** (`/app/projects/39495fc5-...`): header + 14 workers con ScoreBadges, sin "Cargando..." plain.
+- Bundle Railway prod: `index-09AiEa6i.js` (distinto al hash local porque Railway rebuild) — confirma que `207b568` esta deployado.
+
+### Pendiente siguiente sesion
+- **#2** Clerk production instance — sigue bloqueado por dominio
+- **P2**: landing screenshots/pricing/footer legal, Recharts bundle 347KB, mobile 375px wrap, a11y stars, ProjectDetail badge estado, breadcrumbs, filas Workers clickeables enteras, etc.
+
+
 
 ## Comandos utiles para retomar
 
