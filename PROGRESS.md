@@ -1,12 +1,12 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-15T17:30:00-04:00
+## Ultima actualizacion: 2026-04-16T13:30:00-04:00
 
 ## Estado actual
-- Fase: **Sprint MVP cerrado.** Todas las prioridades 1-4 del plan original terminadas. Proxima fase: pulido UX + decisiones de producto (monetizacion, dominio, launch).
+- Fase: **Pulido UX post-MVP.** Audit completo via Playwright, 9 fixes en prod de 28 hallazgos. Quedan 2 UX (#12 paginacion, #14 skeletons) + P2 + #2 Clerk prod (bloqueado por dominio).
 - Branch activo: master
-- Ultimo commit: `08e34b6` — perf: reduce dashboard backend queries from 18+ to 4
-- Deploy prod: OK. Landing + app funcionando con data real.
+- Ultimo commit: `8fa8bbd` — ux: autosave draft + disabled reason hint in EvaluateWorker
+- Deploy prod: OK. App con datos acentuados, scores /5, fechas relativas, worker ctx en Evaluate, autosave.
 
 ## Comandos utiles para retomar
 
@@ -26,6 +26,89 @@ railway run python -u scripts/exec_seed_sql.py /tmp/seed1.sql 34791eb6-e33e-4c75
 railway run python -u scripts/exec_seed_sql.py /tmp/seed2.sql 162e58e2-2530-4627-a0fa-9a5b5f824f14
 railway run python -u scripts/check_seed.py   # verificar counts con conexion fresca
 ```
+
+## Sesion 16 abr 2026 — Audit UX live + 9 fixes en prod + migracion tildes
+
+### Contexto
+Arrancamos retomando desde donde quedo la sesion 15 abr (MVP cerrado, UX audit hecho por lectura de codigo). El usuario pidio correr el audit EN VIVO con Playwright autenticado para separar hipotesis de bugs reales.
+
+### Setup Playwright autenticado
+Plugin MCP Playwright usa profile aislado (`mcp-chrome-7006d60`), no comparte cookies con Chrome normal. Flujo final:
+- Navegar a `/sign-in` desde Claude Code
+- Usuario se loguea manualmente en la ventana del Playwright-chrome
+- Sesion Clerk persiste en ese profile hasta que se cierre
+- Todo el audit se hizo con cuenta real `gsaltron@gmail.com`, org `162e58e2-...`
+
+### Audit findings (28 items priorizados)
+Completa lista en orden de impacto en seccion "UX audit — post-Playwright" abajo. Highlights:
+- **#1** EvaluateWorker sin nombre/RUT/proyecto -> data safety (supervisor puede evaluar al equivocado)
+- **#4** Workers endpoint 8.7s N+1 -> query por worker en loop
+- **#2-3** Clerk "Development mode" visible + menu en ingles
+- **#5** /sign-up rompia funnel (signUpUrl apuntaba a /sign-in)
+- **#8** Typos masivos UI + seed data sin tildes (Mantencion, Electrico, etc.)
+
+### Fixes deployados (5 commits)
+
+**Commit `ac50527` — 4 bloqueadores**
+- `EvaluateWorker.tsx`: fetch worker + project en mount, header muestra "Sergio Diaz · Calderero · RUT 10.087.109-2 · Proyecto: Mantencion Mayor Concentradora · Codelco Andina"
+- `workers.py`: list_workers consolidado a un solo query con `outerjoin + group_by` en vez de loop N+1. `min_score` ahora es `HAVING`. Verificado: 8694ms -> 1850ms (4.7x speedup)
+- `App.tsx`: ruta `/sign-up/*` con `<SignUp>` de Clerk, `signUpUrl="/sign-up"` en SignIn
+- `main.tsx`: `localization={esES}` via `@clerk/localizations` (instalado). "Administrar cuenta", "Cerrar sesion" en espanol
+
+**Commit `02de8a3` — Typos + scores /5 + fechas**
+- Strings UI acentuados: "Evaluacion"->"Evaluación", "Recontratarias"->"¿Recontratarías", "Habilidad Tecnica"->"Habilidad Técnica", "Telefono"->"Teléfono", "Ubicacion"->"Ubicación", "Planificacion"->"Planificación", "Score minimo"->"Score mínimo", "RUT invalido"->"RUT inválido", "Si"->"Sí", "aun"->"aún"
+- `constants.ts` PROJECT_STATUSES + SCORE_LABELS + REHIRE_OPTIONS sync
+- `Dashboard.tsx`: "62% recontrataria" -> "62% recomienda recontratar", Evaluaciones Recientes ahora son Links al WorkerDetail
+- `ScoreBadge.tsx`: prop `showScale`; md size default shows "X.X / 5" inline; sm size keeps compact + title tooltip
+- `WorkerDetail.tsx`: hero badge fuerza `showScale`, cada dimension muestra "X.X / 5" junto a las estrellas
+- `Workers.tsx`: columna "Evals"->"Evaluaciones"
+- Plural correcto: "1 evaluacion" / "N evaluaciones" (antes "N evals")
+- `lib/dates.ts`: helper `formatRelative(iso)` que devuelve "hace 2 dias", "hace 21 h", "ayer", etc.
+- Dashboard Evaluaciones Recientes muestra `· hace 21 h` despues del proyecto
+- Backend `RecentEvaluationItem` ahora incluye `worker_id` para que el Link funcione
+
+**Commit `fb0e3b7` + `953c090` — Migracion tildes en DB**
+- Script nuevo `backend/scripts/fix_tildes.py` (idempotente, asyncpg direct via `statement_cache_size=0`): UPDATE workers.first_name/last_name/specialty, projects.name/location/client_name
+- Corrido via `railway run python -u scripts/fix_tildes.py` contra prod Supabase sa-east-1. 52 + 4 = 56 rows updated
+- Datos acentuados: Diaz->Díaz, Gonzalez->González, Munoz->Muñoz, Lopez->López, Sepulveda->Sepúlveda, Matias->Matías, Raul->Raúl, Sebastian->Sebastián, Hector->Héctor, Jose->José, Electrico->Eléctrico, Mecanico->Mecánico, Canierista->Cañerista, Operador Grua->Operador Grúa, Mantencion->Mantención, Ampliacion->Ampliación, Region->Región, Valparaiso->Valparaíso, Copiapo->Copiapó, Tarapaca->Tarapacá, Puchuncavi->Puchuncaví, Colbun->Colbún, Generacion->Generación
+- `frontend/constants.ts` SPECIALTIES sync con valores acentuados (sino filtro de dropdown no matchea con DB)
+- Seed scripts (`gen_seed_sql.py`, `seed_demo.py`, `admin.py`) sync -> futuros seeds nacen limpios
+
+**Commit `8fa8bbd` — Autosave + disabled hint (EvaluateWorker)**
+- Draft a localStorage key `faenascore:draft:{projectId}:{workerId}` en cada cambio
+- Restaura en mount via `useEffect`. Limpia con `removeItem` al guardar exito
+- Indicador "Borrador guardado hace X" bajo el boton cuando esta completo
+- Si el boton esta disabled: helper text visible + `title` tooltip explica que falta:
+  - "Completa los 5 puntajes" / "Falta 1 puntaje" / "Falta N puntajes"
+  - "Indica si recontratarias"
+  - "Escribe el motivo (minimo 3 caracteres)"
+- Autosave deployado pero NO verificado interactivamente en Playwright (codigo straightforward, verificacion manual recomendada con recarga de pagina)
+
+### Railway deploy notes
+- **No hay autodeploy desde GitHub** en faenascore (confirmado por el usuario via screenshot del dashboard). Cada release requiere `railway up --detach` manual desde el CWD del proyecto
+- Session del CLI expira. Si falla `Unauthorized`, correr `railway login` en terminal normal (no `!railway login` en prompt de Claude - el `!` es para comandos ejecutados desde el prompt interno)
+- Bundle hashes verificados post-deploy para confirmar llego nuevo codigo: `eYslB05P` -> `DGYDkdEb` -> `DsKu3uAx` -> `OJ0Dr81T` -> `CcGOklUG` -> `DkzRyZF4`
+
+### Pendiente implementar (orden sugerido)
+1. **#12** Paginacion Workers — hoy hardcoded `size=50`, sin UI de paginacion. ~30 min
+2. **#14** Skeletons en Dashboard + Evaluate + ProjectDetail — hoy muestran "Cargando..." plain text. Workers y EvaluateWorker YA usan Skeleton. ~15 min
+3. **#2** Clerk production instance — bloqueado hasta comprar dominio (faenascore.cl o subdominio de faymex.cl). Una vez con dominio: crear prod instance en dashboard.clerk.com, sacar 4 env vars (`CLERK_SECRET_KEY`, `CLERK_JWKS_URL`, `CLERK_ISSUER`, `VITE_CLERK_PUBLISHABLE_KEY`), setear en Railway, re-deploy. Elimina banner "Development mode"
+
+### P2 (pulido)
+- Landing sin screenshots / pricing / footer legal
+- WorkerDetail bundle 339KB (Recharts lazy pero pesado cuando hay poco data) — considerar spark SVG
+- Evaluate page intermedia redundante (links a ProjectDetail, no a flujo de evaluacion)
+- Mobile 375px: "Score Promedio" wrapea raro a 2 lineas
+- Stars en EvaluateWorker sin `aria-label` (a11y)
+- ProjectDetail sin badge de estado en header (solo en lista)
+- Sin breadcrumbs
+- Filas de tabla Workers no-clickeables enteras (solo nombre es Link)
+
+### Deuda tecnica nueva descubierta en audit
+- Dashboard hace 4 calls al backend en paralelo, max 2.5s c/u en sa-east-1 -> first paint ~3.5s. Palancas: HTTP cache `stale-while-revalidate`, session pooler 5432 (eliminaria overhead de `statement_cache_size=0`)
+- Evaluaciones Recientes tienen fecha `created_at` que es la fecha de creacion del Evaluation. Si la sesion se alarga, "hace 21 h" queda desactualizado. Sin impacto real mientras no se refresque la pagina
+
+---
 
 ## Sesion 15 abr 2026 — Seed, perf, UX audit
 
