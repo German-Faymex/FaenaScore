@@ -29,6 +29,7 @@ SPECIALTY_FIXES = {
     "Mecanico": "Mecánico",
     "Electrico": "Eléctrico",
     "Canierista": "Cañerista",
+    "Operador Grua": "Operador Grúa",
 }
 PROJECT_NAME_FIXES = {
     "Mantencion Mayor Concentradora": "Mantención Mayor Concentradora",
