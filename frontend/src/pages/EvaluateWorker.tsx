@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Save, ArrowLeft } from 'lucide-react'
 import StarRating from '../components/ui/StarRating'
@@ -6,17 +6,47 @@ import { api } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { SCORE_LABELS, REHIRE_OPTIONS } from '../lib/constants'
 
+interface ContextHeader {
+  worker_name: string
+  worker_rut: string
+  worker_specialty: string
+  project_name: string
+  project_client?: string | null
+}
+
 export default function EvaluateWorker() {
   const { orgId: ORG_ID } = useOrg()
   const { projectId, workerId } = useParams()
   const navigate = useNavigate()
 
+  const [ctx, setCtx] = useState<ContextHeader | null>(null)
   const [scores, setScores] = useState([0, 0, 0, 0, 0])
   const [wouldRehire, setWouldRehire] = useState('')
   const [rehireReason, setRehireReason] = useState('')
   const [comment, setComment] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!ORG_ID || !projectId || !workerId) return
+    let cancelled = false
+    Promise.all([
+      api.getWorker(ORG_ID, workerId),
+      api.getProject(ORG_ID, projectId),
+    ])
+      .then(([w, p]) => {
+        if (cancelled) return
+        setCtx({
+          worker_name: `${w.first_name} ${w.last_name}`,
+          worker_rut: w.rut,
+          worker_specialty: w.specialty,
+          project_name: p.name,
+          project_client: p.client_name,
+        })
+      })
+      .catch(() => { /* header stays in loading state; submit still works */ })
+    return () => { cancelled = true }
+  }, [ORG_ID, projectId, workerId])
 
   const allScoresSet = scores.every((s) => s > 0)
   const needsReason = wouldRehire === 'reservations' || wouldRehire === 'no'
@@ -52,11 +82,30 @@ export default function EvaluateWorker() {
   return (
     <div className="max-w-lg mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
+      <div className="flex items-start gap-3">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg shrink-0 mt-0.5">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">Evaluar Trabajador</h1>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Evaluar Trabajador</p>
+          {ctx ? (
+            <>
+              <h1 className="text-xl font-bold text-gray-900 truncate">{ctx.worker_name}</h1>
+              <p className="text-sm text-gray-600 truncate">
+                {ctx.worker_specialty} · RUT {ctx.worker_rut}
+              </p>
+              <p className="text-sm text-gray-500 mt-1 truncate">
+                Proyecto: <span className="font-medium text-gray-700">{ctx.project_name}</span>
+                {ctx.project_client ? ` · ${ctx.project_client}` : ''}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="h-5 w-40 bg-gray-200 rounded animate-pulse mt-1" />
+              <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mt-1" />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Score dimensions */}

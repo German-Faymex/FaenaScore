@@ -45,50 +45,48 @@ async def list_workers(
     db: AsyncSession = Depends(get_db),
     _member: OrgMember = Depends(get_org_member),
 ):
-    query = select(Worker).where(Worker.org_id == org_id)
-    count_query = select(func.count(Worker.id)).where(Worker.org_id == org_id)
+    eval_count = func.count(Evaluation.id).label("eval_count")
+    avg_score = func.avg(Evaluation.score_average).label("avg_score")
+
+    query = (
+        select(Worker, eval_count, avg_score)
+        .outerjoin(Evaluation, Evaluation.worker_id == Worker.id)
+        .where(Worker.org_id == org_id)
+        .group_by(Worker.id)
+    )
 
     if is_active is not None:
         query = query.where(Worker.is_active == is_active)
-        count_query = count_query.where(Worker.is_active == is_active)
     if specialty:
         query = query.where(Worker.specialty.ilike(f"%{specialty}%"))
-        count_query = count_query.where(Worker.specialty.ilike(f"%{specialty}%"))
     if search:
-        search_filter = Worker.first_name.ilike(f"%{search}%") | Worker.last_name.ilike(f"%{search}%") | Worker.rut.ilike(f"%{search}%")
-        query = query.where(search_filter)
-        count_query = count_query.where(search_filter)
+        query = query.where(
+            Worker.first_name.ilike(f"%{search}%")
+            | Worker.last_name.ilike(f"%{search}%")
+            | Worker.rut.ilike(f"%{search}%")
+        )
+    if min_score is not None:
+        query = query.having(avg_score >= min_score)
 
+    # Count matching rows (honoring min_score via subquery)
+    count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar() or 0
 
-    # Sort
     sort_col = getattr(Worker, sort_by, Worker.last_name)
     query = query.order_by(sort_col.desc() if sort_order == "desc" else sort_col.asc())
 
     offset = (page - 1) * size
-    result = await db.execute(query.offset(offset).limit(size))
-    workers = result.scalars().all()
+    rows = (await db.execute(query.offset(offset).limit(size))).all()
 
-    items = []
-    for w in workers:
-        eval_result = await db.execute(
-            select(func.count(Evaluation.id), func.avg(Evaluation.score_average))
-            .where(Evaluation.worker_id == w.id)
-        )
-        eval_count, avg_score = eval_result.one()
-
-        # Filter by min_score if provided
-        if min_score is not None and (avg_score is None or avg_score < min_score):
-            total -= 1
-            continue
-
-        resp = WorkerResponse(
+    items = [
+        WorkerResponse(
             id=w.id, rut=w.rut, first_name=w.first_name, last_name=w.last_name,
             specialty=w.specialty, phone=w.phone, email=w.email, is_active=w.is_active,
-            evaluation_count=eval_count or 0, avg_score=round(avg_score, 2) if avg_score else None,
+            evaluation_count=ec or 0, avg_score=round(avg, 2) if avg is not None else None,
             created_at=w.created_at,
         )
-        items.append(resp)
+        for w, ec, avg in rows
+    ]
 
     return PaginatedResponse(items=items, total=total, page=page, size=size, pages=(total + size - 1) // size if total else 0)
 

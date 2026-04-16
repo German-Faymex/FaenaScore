@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ClerkProvider } from '@clerk/clerk-react'
+import { esES } from '@clerk/localizations'
 import './index.css'
 import App from './App'
 
@@ -18,7 +19,7 @@ function Root() {
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPubKey}>
+    <ClerkProvider publishableKey={clerkPubKey} localization={esES}>
       <BrowserRouter>
         <App />
       </BrowserRouter>

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { SignedIn, SignedOut, SignIn, useAuth } from '@clerk/clerk-react'
+import { SignedIn, SignedOut, SignIn, SignUp, useAuth } from '@clerk/clerk-react'
 import { OrgProvider } from './lib/org'
 import AppShell from './components/layout/AppShell'
 import Landing from './pages/Landing'
@@ -73,7 +73,15 @@ export default function App() {
         path="/sign-in/*"
         element={
           <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-            <SignIn routing="path" path="/sign-in" signUpUrl="/sign-in" afterSignInUrl="/app" afterSignUpUrl="/app" />
+            <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/app" afterSignUpUrl="/app" />
+          </div>
+        }
+      />
+      <Route
+        path="/sign-up/*"
+        element={
+          <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+            <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/app" afterSignInUrl="/app" />
           </div>
         }
       />
