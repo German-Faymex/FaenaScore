@@ -55,6 +55,7 @@ Retomamos con #2 Clerk prod bloqueado por dominio. Usuario pidio avanzar con P2 
 ### Pendiente siguiente sesion
 - **#2 Clerk production instance** — sigue bloqueado por dominio (faenascore.cl o subdominio faymex.cl). Una vez con dominio: crear prod instance en dashboard.clerk.com, sacar 4 env vars, setear en Railway, `railway up --detach`. Elimina banner "Development mode".
 - **Decisiones de producto** (ver seccion "Pendiente decisiones" abajo): monetizacion, compra dominio, launch strategy.
+- **Decision de naming pendiente** — ver `NAMING_DISCUSSION.md`. Recomendacion: rebrand a **FichaFaena** (2-3h, ventana optima pre-launch). "Score" no es natural en Chile fuera del contexto Dicom; "Ficha" es lenguaje real del rubro. Alternativa marca: **Cuadrilla**. Default si no se decide: mantener FaenaScore.
 
 ---
 
