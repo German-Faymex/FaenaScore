@@ -3,10 +3,18 @@ import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, ClipboardCheck, UserPlus, Pencil } from 'lucide-react'
 import { api, type Project, type ProjectWorkerItem } from '../lib/api'
 import { useOrg } from '../lib/org'
+import { PROJECT_STATUSES } from '../lib/constants'
 import ScoreBadge from '../components/ui/ScoreBadge'
 import Modal from '../components/ui/Modal'
 import AssignWorkersForm from '../components/forms/AssignWorkersForm'
 import NewProjectForm from '../components/forms/NewProjectForm'
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-100 text-green-700',
+  completed: 'bg-blue-100 text-blue-700',
+  planning: 'bg-gray-100 text-gray-700',
+  cancelled: 'bg-red-100 text-red-700',
+}
 
 export default function ProjectDetail() {
   const { orgId: ORG_ID } = useOrg()
@@ -66,15 +74,29 @@ export default function ProjectDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/app/projects" className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-          {project.client_name && <p className="text-sm text-gray-500">{project.client_name} · {project.location}</p>}
+      <div>
+        <nav className="flex items-center gap-1 text-xs text-gray-500 mb-2" aria-label="Breadcrumb">
+          <Link to="/app/projects" className="hover:text-gray-700">Proyectos</Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-700 truncate">{project.name}</span>
+        </nav>
+        <div className="flex items-center gap-3">
+          <Link to="/app/projects" className="p-2 hover:bg-gray-100 rounded-lg" aria-label="Volver a proyectos">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[project.status] || 'bg-gray-100 text-gray-700'}`}>
+                {PROJECT_STATUSES.find((s) => s.value === project.status)?.label || project.status}
+              </span>
+            </div>
+            {project.client_name && <p className="text-sm text-gray-500">{project.client_name} · {project.location}</p>}
+          </div>
+          <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="Editar">
+            <Pencil className="w-4 h-4" />
+          </button>
         </div>
-        <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="Editar">
-          <Pencil className="w-4 h-4" />
-        </button>
       </div>
 
       {/* Evaluate button */}

@@ -32,16 +32,25 @@ export default function WorkerDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link to="/app/workers" className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{worker.first_name} {worker.last_name}</h1>
-          <p className="text-sm text-gray-500">{worker.specialty} · {worker.rut}</p>
+      <div>
+        <nav className="flex items-center gap-1 text-xs text-gray-500 mb-2" aria-label="Breadcrumb">
+          <Link to="/app/workers" className="hover:text-gray-700">Trabajadores</Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-700 truncate">{worker.first_name} {worker.last_name}</span>
+        </nav>
+        <div className="flex items-center gap-3">
+          <Link to="/app/workers" className="p-2 hover:bg-gray-100 rounded-lg" aria-label="Volver a trabajadores">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 truncate">{worker.first_name} {worker.last_name}</h1>
+            <p className="text-sm text-gray-500 truncate">{worker.specialty} · {worker.rut}</p>
+          </div>
+          <ScoreBadge score={worker.avg_score} showScale />
+          <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="Editar">
+            <Pencil className="w-4 h-4" />
+          </button>
         </div>
-        <ScoreBadge score={worker.avg_score} showScale />
-        <button onClick={() => setShowEdit(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="Editar">
-          <Pencil className="w-4 h-4" />
-        </button>
       </div>
 
       {/* Contact */}

@@ -154,10 +154,13 @@ export default function Dashboard() {
 
 function KPICard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-sm text-gray-600">{label}</span></div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
+    <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="shrink-0">{icon}</span>
+        <span className="text-xs sm:text-sm text-gray-600 leading-tight">{label}</span>
+      </div>
+      <p className="text-xl sm:text-2xl font-bold text-gray-900">{value}</p>
+      {sub && <p className="text-xs text-gray-500 mt-1 leading-tight">{sub}</p>}
     </div>
   )
 }

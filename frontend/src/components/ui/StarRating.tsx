@@ -18,21 +18,32 @@ function getColor(value: number) {
 
 export default function StarRating({ value, onChange, size = 'md', readonly = false }: StarRatingProps) {
   return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          disabled={readonly}
-          onClick={() => onChange?.(star)}
-          className={`${tapSizes[size]} ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'} transition-transform touch-manipulation`}
-        >
-          <Star
-            className={`${sizes[size]} ${star <= value ? getColor(value) : 'text-gray-300'}`}
-            fill={star <= value ? 'currentColor' : 'none'}
-          />
-        </button>
-      ))}
+    <div
+      className="flex items-center gap-0.5"
+      role={readonly ? 'img' : 'radiogroup'}
+      aria-label={readonly ? `Puntaje ${value} de 5` : 'Selecciona un puntaje del 1 al 5'}
+    >
+      {[1, 2, 3, 4, 5].map((star) => {
+        const label = star === 1 ? '1 estrella' : `${star} estrellas`
+        return (
+          <button
+            key={star}
+            type="button"
+            role={readonly ? undefined : 'radio'}
+            aria-checked={readonly ? undefined : star === value}
+            aria-label={label}
+            title={label}
+            disabled={readonly}
+            onClick={() => onChange?.(star)}
+            className={`${tapSizes[size]} ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'} transition-transform touch-manipulation`}
+          >
+            <Star
+              className={`${sizes[size]} ${star <= value ? getColor(value) : 'text-gray-300'}`}
+              fill={star <= value ? 'currentColor' : 'none'}
+            />
+          </button>
+        )
+      })}
     </div>
   )
 }

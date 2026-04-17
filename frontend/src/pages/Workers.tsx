@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Search, Filter, UserPlus, Users, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api, type Worker } from '../lib/api'
 import { useOrg } from '../lib/org'
@@ -15,6 +15,7 @@ const PAGE_SIZE = 20
 
 export default function Workers() {
   const { orgId: ORG_ID } = useOrg()
+  const navigate = useNavigate()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -164,9 +165,17 @@ export default function Workers() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {workers.map((w) => (
-                    <tr key={w.id} className="hover:bg-gray-50">
+                    <tr
+                      key={w.id}
+                      onClick={() => navigate(`/app/workers/${w.id}`)}
+                      className="hover:bg-gray-50 cursor-pointer"
+                    >
                       <td className="px-4 py-3">
-                        <Link to={`/app/workers/${w.id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                        <Link
+                          to={`/app/workers/${w.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-medium text-gray-900 hover:text-blue-600"
+                        >
                           {w.first_name} {w.last_name}
                         </Link>
                       </td>

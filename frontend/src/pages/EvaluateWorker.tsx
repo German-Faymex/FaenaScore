@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Save, ArrowLeft, Check } from 'lucide-react'
 import StarRating from '../components/ui/StarRating'
 import { api } from '../lib/api'
@@ -142,29 +142,40 @@ export default function EvaluateWorker() {
   return (
     <div className="max-w-lg mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg shrink-0 mt-0.5">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Evaluar Trabajador</p>
-          {ctx ? (
-            <>
-              <h1 className="text-xl font-bold text-gray-900 truncate">{ctx.worker_name}</h1>
-              <p className="text-sm text-gray-600 truncate">
-                {ctx.worker_specialty} · RUT {ctx.worker_rut}
-              </p>
-              <p className="text-sm text-gray-500 mt-1 truncate">
-                Proyecto: <span className="font-medium text-gray-700">{ctx.project_name}</span>
-                {ctx.project_client ? ` · ${ctx.project_client}` : ''}
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="h-5 w-40 bg-gray-200 rounded animate-pulse mt-1" />
-              <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mt-1" />
-            </>
-          )}
+      <div>
+        {ctx && projectId && (
+          <nav className="flex items-center gap-1 text-xs text-gray-500 mb-2 pl-11" aria-label="Breadcrumb">
+            <Link to="/app/projects" className="hover:text-gray-700">Proyectos</Link>
+            <span className="text-gray-400">/</span>
+            <Link to={`/app/projects/${projectId}`} className="hover:text-gray-700 truncate max-w-[10rem]">{ctx.project_name}</Link>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-700">Evaluar</span>
+          </nav>
+        )}
+        <div className="flex items-start gap-3">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg shrink-0 mt-0.5" aria-label="Volver">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Evaluar Trabajador</p>
+            {ctx ? (
+              <>
+                <h1 className="text-xl font-bold text-gray-900 truncate">{ctx.worker_name}</h1>
+                <p className="text-sm text-gray-600 truncate">
+                  {ctx.worker_specialty} · RUT {ctx.worker_rut}
+                </p>
+                <p className="text-sm text-gray-500 mt-1 truncate">
+                  Proyecto: <span className="font-medium text-gray-700">{ctx.project_name}</span>
+                  {ctx.project_client ? ` · ${ctx.project_client}` : ''}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="h-5 w-40 bg-gray-200 rounded animate-pulse mt-1" />
+                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mt-1" />
+              </>
+            )}
+          </div>
         </div>
       </div>
 
