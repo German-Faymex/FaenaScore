@@ -1,9 +1,69 @@
 # FaenaScore — Progreso de Desarrollo
 
-## Ultima actualizacion: 2026-04-16T17:15:00-04:00
+## Ultima actualizacion: 2026-04-17T19:00:00-04:00
 
 ## Estado actual
-- Fase: **Pulido UX post-MVP.** 11 fixes en prod de 28 hallazgos. Cerradas #12 (paginacion) y #14 (skeletons), **ambas verificadas visualmente en prod**. Queda #2 Clerk prod (bloqueado por dominio) + P2.
+- Fase: **P2 polish cerrado.** Quedan solamente #2 Clerk prod (bloqueado por dominio) y decisiones de producto (modelo monetizacion, compra dominio).
+- Branch activo: master
+- Ultimo commit: `e83fb0a` — ux: P2 phase 2 (sparkline SVG, empty states, landing pricing + screenshot, legal pages)
+- Commit anterior: `79b2ed7` — ux: P2 quick wins (a11y stars, status badge, clickable rows, mobile KPI, breadcrumbs)
+- Deploy prod: bundle Railway `index-CzvcM-hl.js` confirma codigo en prod. `/terminos` 200, `/privacidad` 200, `/dashboard-preview.png` 200, `/api/health` ok. Playwright verifico landing con hero + product preview + 3 planes de pricing.
+
+## Sesion 17 abr 2026 — P2 polish completo (11 items en 2 commits)
+
+### Contexto
+Retomamos con #2 Clerk prod bloqueado por dominio. Usuario pidio avanzar con P2 polish directamente. Decisiones del usuario:
+1. Pricing real en CLP (estimado, ajustable despues)
+2. Screenshots: decide tu
+3. Terminos + privacidad: redactar primer borrador propio
+4. Resto tecnico: decide tu
+
+### Commit `79b2ed7` — P2 quick wins
+- **a11y stars en EvaluateWorker** (`StarRating.tsx`): `role="radiogroup"` en container, `role="radio"` + `aria-checked` + `aria-label="N estrellas"` + `title` tooltip por boton
+- **Status badge en ProjectDetail header**: breadcrumb "Proyectos / [nombre]" + badge coloreado (active=green, paused=amber, completed=gray, cancelled=red) junto al titulo
+- **Filas Workers clickeables enteras**: `useNavigate` + `onClick={() => navigate('/app/workers/${w.id}')}` + `cursor-pointer`. Link del nombre usa `stopPropagation` para no duplicar nav
+- **Mobile KPI wrap fix** (`Dashboard.tsx`): padding responsive `p-3 sm:p-4`, texto `text-xs sm:text-sm leading-tight`, `shrink-0` en icon wrapper
+- **Empty states con CTA** en Dashboard: "Sin trabajadores evaluados aun" + Link a `/app/evaluate`, "Sin evaluaciones recientes" + mismo Link
+- Bundle: `index-09AiEa6i.js` → `index-CAf2vZi0.js`
+
+### Commit `e83fb0a` — P2 phase 2 (mas pesado)
+- **Recharts → SVG sparkline** (`WorkerDetail.tsx`): eliminado `import { LineChart, ... } from 'recharts'`. Nuevo componente `ScoreSparkline` inline (600x160 viewBox, 5 grid lines, polyline path, circles con `<title>` tooltip, labels de proyectos debajo). **WorkerDetail chunk: 347KB → 7KB** (Recharts ya no se descarga nunca).
+- **Breadcrumbs**: "Trabajadores / [nombre]" en WorkerDetail. "Proyectos / [nombre] / Evaluar" en EvaluateWorker con `pl-11` offset para alinearse con el back-arrow.
+- **Evaluate simplificada**: antes lista pasiva de proyectos que linkeaba a ProjectDetail. Ahora hace `Promise.all(listProjectWorkers)` por proyecto, computa `pending_count` + `first_pending_worker_id`, ordena por pendientes desc. Cada card muestra progreso "N/M evaluados" + badge amber "N pendientes" + **boton "Evaluar" salta directo a `/app/evaluate/${projectId}/${firstPendingId}`**. Si no hay pendientes, muestra badge green "Completo".
+- **Landing pricing**: 3 PricingCard components dentro de seccion `#pricing` con fondo gray-50:
+  - Gratis $0 (15 trabajadores, 1 proyecto, 30 evals/mes, import Excel)
+  - Profesional **$29.990 CLP/mes** (100 trabajadores, proyectos ilimitados, evals ilimitadas) — featured "Más popular"
+  - Empresa **$99.990 CLP/mes** (ilimitado, API, onboarding, soporte prioritario) — CTA `mailto:contacto@faenascore.cl`
+  - Disclaimer: "Precios referenciales, aún en fase de lanzamiento. Podrían ajustarse antes del cobro."
+- **Landing product preview**: screenshot real del dashboard (Playwright snapshot de prod, 1440x900, 105KB) en `/dashboard-preview.png`. Gradient blur blue-50 debajo + rounded-xl + shadow-2xl.
+- **Landing hero fix mobile**: `leading-tight`, `text-base md:text-xl`, `max-w-xl md:max-w-2xl`, `leading-relaxed`, subtitulo deja de cortarse raro en 375px.
+- **Landing footer con 3 columnas**: FaenaScore / Producto / Legal. Legal linkea a `/terminos`, `/privacidad`, `mailto:contacto@faenascore.cl`.
+- **Paginas legales nuevas**:
+  - `frontend/src/pages/Terms.tsx` — 11 secciones (objeto, registro, uso aceptable, datos ingresados por Usuario, planes y pagos CLP, propiedad intelectual, limitacion de responsabilidad, terminacion, modificaciones, **ley aplicable Chile/Santiago**, contacto). Referencia Ley N° 19.628 y Codigo del Trabajo. Header con back-arrow.
+  - `frontend/src/pages/Privacy.tsx` — 12 secciones (responsable tratamiento, datos tratados, finalidades, base licitud, subencargados **Clerk/Supabase/Railway**, almacenamiento SA, plazo 90 dias, derechos ARCO, seguridad, cookies, modificaciones, contacto). Referencia Ley 19.628 + GDPR aplicable.
+  - Ambas con disclaimer "Borrador inicial. Este documento es referencial y no reemplaza asesoria legal especifica".
+- **Rutas en App.tsx**: `/terminos` y `/privacidad` agregadas a ambas ramas (clerkEnabled y mock). Lazy imports.
+- **Empty state WorkerDetail**: "Sin evaluaciones aun" + CTA a `/app/evaluate` cuando el trabajador no tiene historial.
+- Bundle: `index-CAf2vZi0.js` → `index-CzvcM-hl.js`. Vendor Recharts dejo de aparecer en output.
+
+### Verificacion prod (Playwright)
+- `curl /api/health` → `{"status":"ok","database":"connected"}`
+- `curl /terminos` → 200, `curl /privacidad` → 200, `curl /dashboard-preview.png` → 200
+- Landing desktop: hero con subtitulo completo + product preview image + 3 planes pricing visibles + footer con 3 columnas
+- Screenshot capturado: `dashboard-preview.png` (Playwright snapshot de prod, usuario logueado en profile `mcp-chrome-7006d60`)
+
+### Pendiente siguiente sesion
+- **#2 Clerk production instance** — sigue bloqueado por dominio (faenascore.cl o subdominio faymex.cl). Una vez con dominio: crear prod instance en dashboard.clerk.com, sacar 4 env vars, setear en Railway, `railway up --detach`. Elimina banner "Development mode".
+- **Decisiones de producto** (ver seccion "Pendiente decisiones" abajo): monetizacion, compra dominio, launch strategy.
+
+---
+
+## Sesion 16 abr 2026 (tarde) — #12 paginacion + #14 skeletons
+
+### Contexto
+Retomamos post-audit UX de la manana. Arrancamos cerrando los 2 items UX que quedaban de la lista priorizada.
+
+### Estado tras sesion (para contexto del 17 abr)
 - Branch activo: master
 - Ultimo commit: `207b568` — ux: skeleton loaders in Dashboard / Evaluate / ProjectDetail
 - Commit anterior: `1364141` — feat: paginate Workers page (size 20 + prev/next UI)
