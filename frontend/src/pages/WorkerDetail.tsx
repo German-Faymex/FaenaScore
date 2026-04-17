@@ -1,13 +1,57 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Phone, Mail, Pencil } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { ArrowLeft, Phone, Mail, Pencil, ClipboardCheck } from 'lucide-react'
 import { api, type WorkerDetail as WorkerDetailType } from '../lib/api'
 import { useOrg } from '../lib/org'
 import StarRating from '../components/ui/StarRating'
 import ScoreBadge from '../components/ui/ScoreBadge'
 import Modal from '../components/ui/Modal'
 import NewWorkerForm from '../components/forms/NewWorkerForm'
+
+type TrendPoint = { project_name: string; date: string | null; score_average: number }
+
+function ScoreSparkline({ points }: { points: TrendPoint[] }) {
+  const width = 600
+  const height = 160
+  const padX = 16
+  const padY = 20
+  const innerW = width - padX * 2
+  const innerH = height - padY * 2
+  const minY = 1
+  const maxY = 5
+  const n = points.length
+  const coords = points.map((p, i) => {
+    const x = padX + (n === 1 ? innerW / 2 : (i * innerW) / (n - 1))
+    const y = padY + innerH - ((p.score_average - minY) / (maxY - minY)) * innerH
+    return { x, y, p }
+  })
+  const path = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ')
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-40" role="img" aria-label="Tendencia de scores por proyecto">
+      {[1, 2, 3, 4, 5].map((v) => {
+        const y = padY + innerH - ((v - minY) / (maxY - minY)) * innerH
+        return (
+          <g key={v}>
+            <line x1={padX} x2={width - padX} y1={y} y2={y} stroke="#e5e7eb" strokeDasharray="3 3" />
+            <text x={padX - 4} y={y + 4} textAnchor="end" fontSize="10" fill="#9ca3af">{v}</text>
+          </g>
+        )
+      })}
+      <path d={path} fill="none" stroke="#2563eb" strokeWidth="2" />
+      {coords.map((c, i) => (
+        <g key={i}>
+          <circle cx={c.x} cy={c.y} r="4" fill="#2563eb">
+            <title>{c.p.project_name}: {c.p.score_average.toFixed(1)} / 5</title>
+          </circle>
+          <text x={c.x} y={height - 4} textAnchor="middle" fontSize="10" fill="#6b7280">
+            {c.p.project_name.length > 14 ? c.p.project_name.slice(0, 13) + '…' : c.p.project_name}
+          </text>
+        </g>
+      ))}
+    </svg>
+  )
+}
 
 export default function WorkerDetail() {
   const { orgId: ORG_ID } = useOrg()
@@ -95,15 +139,7 @@ export default function WorkerDetail() {
       {score_trend.length > 1 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="font-semibold text-gray-900 mb-3">Tendencia</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={score_trend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="project_name" tick={{ fontSize: 11 }} />
-              <YAxis domain={[1, 5]} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="score_average" stroke="#2563eb" strokeWidth={2} dot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <ScoreSparkline points={score_trend} />
         </div>
       )}
 
@@ -143,7 +179,12 @@ export default function WorkerDetail() {
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h2 className="font-semibold text-gray-900 mb-3">Historial de Evaluaciones</h2>
         {evaluations.length === 0 ? (
-          <p className="text-gray-400 text-sm">Sin evaluaciones</p>
+          <div className="text-sm text-gray-500">
+            <p>Sin evaluaciones todavía</p>
+            <Link to="/app/evaluate" className="inline-flex items-center gap-1 mt-2 text-blue-600 hover:text-blue-700 font-medium">
+              <ClipboardCheck className="w-4 h-4" /> Evaluar en un proyecto
+            </Link>
+          </div>
         ) : (
           <div className="space-y-3">
             {evaluations.map((ev) => (

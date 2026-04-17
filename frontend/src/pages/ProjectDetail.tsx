@@ -124,7 +124,15 @@ export default function ProjectDetail() {
           </button>
         </div>
         {workers.length === 0 ? (
-          <p className="p-4 text-gray-400 text-sm">Sin trabajadores asignados</p>
+          <div className="p-6 text-center">
+            <p className="text-sm text-gray-500">Sin trabajadores asignados al proyecto</p>
+            <button
+              onClick={() => setShowAssign(true)}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700"
+            >
+              <UserPlus className="w-4 h-4" /> Asignar trabajadores
+            </button>
+          </div>
         ) : (
           <div className="divide-y divide-gray-100">
             {workers.map((w) => (

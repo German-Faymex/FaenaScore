@@ -13,6 +13,8 @@ const Workers = lazy(() => import('./pages/Workers'))
 const WorkerDetail = lazy(() => import('./pages/WorkerDetail'))
 const Evaluate = lazy(() => import('./pages/Evaluate'))
 const EvaluateWorker = lazy(() => import('./pages/EvaluateWorker'))
+const Terms = lazy(() => import('./pages/Terms'))
+const Privacy = lazy(() => import('./pages/Privacy'))
 
 const clerkEnabled = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) &&
   import.meta.env.VITE_AUTH_MOCK_ENABLED !== 'true'
@@ -48,6 +50,8 @@ export default function App() {
     return (
       <Routes>
         <Route path="/" element={<Landing isSignedIn={true} />} />
+        <Route path="/terminos" element={<Suspense fallback={<PageFallback />}><Terms /></Suspense>} />
+        <Route path="/privacidad" element={<Suspense fallback={<PageFallback />}><Privacy /></Suspense>} />
         <Route path="/app/*" element={<ProtectedApp />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -69,6 +73,8 @@ export default function App() {
           </>
         }
       />
+      <Route path="/terminos" element={<Suspense fallback={<PageFallback />}><Terms /></Suspense>} />
+      <Route path="/privacidad" element={<Suspense fallback={<PageFallback />}><Privacy /></Suspense>} />
       <Route
         path="/sign-in/*"
         element={

@@ -1,21 +1,46 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardCheck } from 'lucide-react'
+import { ClipboardCheck, FolderKanban } from 'lucide-react'
 import { api, type Project } from '../lib/api'
 import { useOrg } from '../lib/org'
 import { CardSkeleton } from '../components/ui/Skeleton'
 
+interface ProjectWithPending extends Project {
+  pending_count: number
+  first_pending_worker_id: string | null
+}
+
 export default function Evaluate() {
   const { orgId: ORG_ID } = useOrg()
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<ProjectWithPending[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!ORG_ID) return
-    api.listProjects(ORG_ID!, { status: 'active', size: 50 })
-      .then((res) => setProjects(res.items))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await api.listProjects(ORG_ID!, { status: 'active', size: 50 })
+        const enriched = await Promise.all(
+          res.items.map(async (p) => {
+            try {
+              const workers = await api.listProjectWorkers(ORG_ID!, p.id)
+              const pending = workers.filter((w) => !w.evaluated)
+              return { ...p, pending_count: pending.length, first_pending_worker_id: pending[0]?.id ?? null }
+            } catch {
+              return { ...p, pending_count: 0, first_pending_worker_id: null }
+            }
+          })
+        )
+        if (!cancelled) {
+          enriched.sort((a, b) => b.pending_count - a.pending_count)
+          setProjects(enriched)
+        }
+      } catch { /* */ }
+      finally { if (!cancelled) setLoading(false) }
+    }
+    load()
+    return () => { cancelled = true }
   }, [ORG_ID])
 
   if (loading) return (
@@ -29,25 +54,58 @@ export default function Evaluate() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">Evaluar Equipo</h1>
-      <p className="text-gray-600">Selecciona un proyecto activo para evaluar a los trabajadores.</p>
+      <p className="text-gray-600">Proyectos activos con trabajadores pendientes de evaluar.</p>
 
       {projects.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
           <ClipboardCheck className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p>No hay proyectos activos</p>
+          <p className="font-medium text-gray-700">No hay proyectos activos</p>
+          <p className="text-sm text-gray-500 mt-1">Crea un proyecto o cambia el estado a "Activo"</p>
+          <Link
+            to="/app/projects"
+            className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            <FolderKanban className="w-4 h-4" /> Ir a Proyectos
+          </Link>
         </div>
       ) : (
         <div className="grid gap-3">
-          {projects.map((p) => (
-            <Link key={p.id} to={`/app/projects/${p.id}`} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all">
-              <h3 className="font-semibold text-gray-900">{p.name}</h3>
-              {p.client_name && <p className="text-sm text-gray-500">{p.client_name}</p>}
-              <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                <span>{p.worker_count} trabajadores</span>
-                <span>{p.evaluation_count} evaluados</span>
+          {projects.map((p) => {
+            const done = p.worker_count - p.pending_count
+            const hasPending = p.pending_count > 0 && p.first_pending_worker_id
+            return (
+              <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <Link to={`/app/projects/${p.id}`} className="block">
+                    <h3 className="font-semibold text-gray-900 hover:text-blue-600 truncate">{p.name}</h3>
+                    {p.client_name && <p className="text-sm text-gray-500 truncate">{p.client_name}</p>}
+                  </Link>
+                  <div className="flex gap-3 mt-2 text-xs text-gray-600">
+                    <span className="font-medium text-gray-900">
+                      {done} / {p.worker_count} evaluados
+                    </span>
+                    {p.pending_count > 0 && (
+                      <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+                        {p.pending_count} pendiente{p.pending_count === 1 ? '' : 's'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {hasPending ? (
+                  <Link
+                    to={`/app/evaluate/${p.id}/${p.first_pending_worker_id}`}
+                    className="shrink-0 flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+                  >
+                    <ClipboardCheck className="w-4 h-4" /> Evaluar
+                  </Link>
+                ) : (
+                  <span className="shrink-0 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full font-medium">
+                    Completo
+                  </span>
+                )}
               </div>
-            </Link>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

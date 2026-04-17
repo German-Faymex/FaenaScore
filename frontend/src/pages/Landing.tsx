@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ClipboardCheck, TrendingUp, History, ShieldCheck, Zap, Users } from 'lucide-react'
+import { ClipboardCheck, TrendingUp, History, ShieldCheck, Zap, Users, Check } from 'lucide-react'
 
 interface LandingProps {
   isSignedIn: boolean
@@ -26,17 +26,17 @@ export default function Landing({ isSignedIn }: LandingProps) {
       </header>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-4 md:px-6 py-16 md:py-24 text-center">
-        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 tracking-tight">
+      <section className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-24 text-center">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
           Evalúa a tus trabajadores de faena.
           <br className="hidden md:block" />
           <span className="text-blue-600"> Nunca más recontrates al equivocado.</span>
         </h2>
-        <p className="mt-6 text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+        <p className="mt-5 md:mt-6 text-base md:text-xl text-gray-600 max-w-xl md:max-w-2xl mx-auto leading-relaxed">
           La herramienta mobile-first para contratistas de minería y construcción.
           Decisiones de recontratación basadas en datos, no en memoria o WhatsApp.
         </p>
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="mt-8 md:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             to={primaryCta.to}
             className="w-full sm:w-auto px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
@@ -49,6 +49,19 @@ export default function Landing({ isSignedIn }: LandingProps) {
           >
             Ver cómo funciona
           </a>
+        </div>
+
+        {/* Product preview */}
+        <div className="mt-12 md:mt-16 relative">
+          <div className="absolute inset-x-0 top-1/2 -bottom-4 bg-gradient-to-b from-blue-50 to-transparent blur-3xl -z-10" aria-hidden="true" />
+          <img
+            src="/dashboard-preview.png"
+            alt="Vista previa del Dashboard de FaenaScore mostrando KPIs, top trabajadores y evaluaciones recientes."
+            width={1440}
+            height={900}
+            loading="eager"
+            className="w-full max-w-5xl mx-auto rounded-xl shadow-2xl border border-gray-200"
+          />
         </div>
       </section>
 
@@ -105,6 +118,70 @@ export default function Landing({ isSignedIn }: LandingProps) {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section id="pricing" className="bg-gray-50 py-16 md:py-24">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
+          <h3 className="text-2xl md:text-3xl font-bold text-gray-900 text-center">
+            Planes simples. Precios en pesos chilenos.
+          </h3>
+          <p className="mt-3 text-center text-gray-600">
+            Sin tarjeta de crédito para empezar. Cambia de plan cuando lo necesites.
+          </p>
+          <div className="mt-10 grid md:grid-cols-3 gap-6">
+            <PricingCard
+              name="Gratis"
+              price="$0"
+              period="para siempre"
+              description="Para probar la herramienta en una faena pequeña."
+              features={[
+                'Hasta 15 trabajadores',
+                '1 proyecto activo',
+                '30 evaluaciones por mes',
+                'Import Excel / CSV',
+                'Exportar trabajadores a CSV',
+              ]}
+              cta={primaryCta.label}
+              ctaTo={primaryCta.to}
+            />
+            <PricingCard
+              name="Profesional"
+              price="$29.990"
+              period="CLP / mes"
+              description="Para contratistas con faenas activas de forma permanente."
+              featured
+              features={[
+                'Hasta 100 trabajadores',
+                'Proyectos ilimitados',
+                'Evaluaciones ilimitadas',
+                'Historial completo por trabajador',
+                'Soporte por email',
+              ]}
+              cta={primaryCta.label}
+              ctaTo={primaryCta.to}
+            />
+            <PricingCard
+              name="Empresa"
+              price="$99.990"
+              period="CLP / mes"
+              description="Para empresas con múltiples equipos y muchos trabajadores."
+              features={[
+                'Trabajadores ilimitados',
+                'Múltiples usuarios por organización',
+                'Acceso a la API',
+                'Onboarding asistido',
+                'Soporte prioritario',
+              ]}
+              cta="Contactar"
+              ctaTo="mailto:contacto@faenascore.cl?subject=Plan%20Empresa"
+              external
+            />
+          </div>
+          <p className="mt-8 text-center text-xs text-gray-500">
+            Precios referenciales, aún en fase de lanzamiento. Podrían ajustarse antes del cobro.
+          </p>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="bg-blue-600 py-16">
         <div className="max-w-3xl mx-auto px-4 md:px-6 text-center">
@@ -124,12 +201,104 @@ export default function Landing({ isSignedIn }: LandingProps) {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 py-8">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} FaenaScore. Hecho en Chile.</p>
-          <p>Para contratistas de minería y construcción.</p>
+      <footer className="border-t border-gray-200 py-10">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
+          <div className="grid gap-8 md:grid-cols-3 text-sm">
+            <div>
+              <p className="font-semibold text-gray-900">FaenaScore</p>
+              <p className="mt-2 text-gray-500">Evaluación de trabajadores de faena para contratistas de minería y construcción.</p>
+              <p className="mt-2 text-gray-400 text-xs">Hecho en Chile</p>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">Producto</p>
+              <ul className="mt-2 space-y-1.5 text-gray-600">
+                <li><a href="#features" className="hover:text-blue-600">Funciones</a></li>
+                <li><a href="#pricing" className="hover:text-blue-600">Precios</a></li>
+                <li><Link to={primaryCta.to} className="hover:text-blue-600">{primaryCta.label}</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">Legal</p>
+              <ul className="mt-2 space-y-1.5 text-gray-600">
+                <li><Link to="/terminos" className="hover:text-blue-600">Términos de Servicio</Link></li>
+                <li><Link to="/privacidad" className="hover:text-blue-600">Política de Privacidad</Link></li>
+                <li><a href="mailto:contacto@faenascore.cl" className="hover:text-blue-600">contacto@faenascore.cl</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-gray-100 text-xs text-gray-400 flex flex-col md:flex-row items-center justify-between gap-2">
+            <p>© {new Date().getFullYear()} FaenaScore. Todos los derechos reservados.</p>
+            <p>Para contratistas de minería y construcción.</p>
+          </div>
         </div>
       </footer>
+    </div>
+  )
+}
+
+function PricingCard({
+  name,
+  price,
+  period,
+  description,
+  features,
+  cta,
+  ctaTo,
+  featured,
+  external,
+}: {
+  name: string
+  price: string
+  period: string
+  description: string
+  features: string[]
+  cta: string
+  ctaTo: string
+  featured?: boolean
+  external?: boolean
+}) {
+  const buttonClass = featured
+    ? 'bg-blue-600 text-white hover:bg-blue-700'
+    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+  const cardClass = featured
+    ? 'relative bg-white rounded-xl border-2 border-blue-600 p-6 shadow-sm'
+    : 'relative bg-white rounded-xl border border-gray-200 p-6'
+  return (
+    <div className={cardClass}>
+      {featured && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+          Más popular
+        </span>
+      )}
+      <h4 className="text-lg font-semibold text-gray-900">{name}</h4>
+      <div className="mt-4 flex items-baseline gap-2">
+        <span className="text-3xl font-bold text-gray-900">{price}</span>
+        <span className="text-sm text-gray-500">{period}</span>
+      </div>
+      <p className="mt-3 text-sm text-gray-600">{description}</p>
+      <ul className="mt-5 space-y-2">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+            <Check className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      {external ? (
+        <a
+          href={ctaTo}
+          className={`mt-6 block w-full text-center px-4 py-2.5 rounded-lg font-medium transition-colors ${buttonClass}`}
+        >
+          {cta}
+        </a>
+      ) : (
+        <Link
+          to={ctaTo}
+          className={`mt-6 block w-full text-center px-4 py-2.5 rounded-lg font-medium transition-colors ${buttonClass}`}
+        >
+          {cta}
+        </Link>
+      )}
     </div>
   )
 }

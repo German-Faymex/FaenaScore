@@ -104,7 +104,12 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Top Trabajadores</h2>
           {topWorkers.length === 0 ? (
-            <p className="text-gray-400 text-sm">Sin evaluaciones aún</p>
+            <div className="text-sm text-gray-500">
+              <p>Sin evaluaciones aún.</p>
+              <Link to="/app/evaluate" className="inline-flex items-center gap-1 mt-2 text-blue-600 hover:text-blue-700 font-medium">
+                <ClipboardCheck className="w-4 h-4" /> Evaluar equipo
+              </Link>
+            </div>
           ) : (
             <div className="space-y-2">
               {topWorkers.map((w) => (
@@ -124,7 +129,12 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Evaluaciones Recientes</h2>
           {recent.length === 0 ? (
-            <p className="text-gray-400 text-sm">Sin evaluaciones aún</p>
+            <div className="text-sm text-gray-500">
+              <p>Sin evaluaciones aún.</p>
+              <Link to="/app/evaluate" className="inline-flex items-center gap-1 mt-2 text-blue-600 hover:text-blue-700 font-medium">
+                <ClipboardCheck className="w-4 h-4" /> Evaluar al primer pendiente
+              </Link>
+            </div>
           ) : (
             <div className="space-y-2">
               {recent.map((e) => (
